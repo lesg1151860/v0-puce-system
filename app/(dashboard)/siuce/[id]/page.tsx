@@ -372,12 +372,12 @@ export default function EditarCasoSIUCEPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="danoSecundario">Daño Secundario</Label>
-                <Select defaultValue={caso.danoSecundario || ""} onValueChange={(value) => setValue("danoSecundario", value as CasoSIUCEFormData["danoSecundario"])}>
+                <Select defaultValue={caso.danoSecundario || "none"} onValueChange={(value) => setValue("danoSecundario", value === "none" ? undefined : value as CasoSIUCEFormData["danoSecundario"])}>
                   <SelectTrigger>
                     <SelectValue placeholder="Opcional" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Ninguno</SelectItem>
+                    <SelectItem value="none">Ninguno</SelectItem>
                     {tiposDano.map((dano) => (
                       <SelectItem key={dano} value={dano}>{dano}</SelectItem>
                     ))}
@@ -387,12 +387,12 @@ export default function EditarCasoSIUCEPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="danoTerciario">Daño Terciario</Label>
-                <Select defaultValue={caso.danoTerciario || ""} onValueChange={(value) => setValue("danoTerciario", value as CasoSIUCEFormData["danoTerciario"])}>
+                <Select defaultValue={caso.danoTerciario || "none"} onValueChange={(value) => setValue("danoTerciario", value === "none" ? undefined : value as CasoSIUCEFormData["danoTerciario"])}>
                   <SelectTrigger>
                     <SelectValue placeholder="Opcional" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Ninguno</SelectItem>
+                    <SelectItem value="none">Ninguno</SelectItem>
                     {tiposDano.map((dano) => (
                       <SelectItem key={dano} value={dano}>{dano}</SelectItem>
                     ))}
