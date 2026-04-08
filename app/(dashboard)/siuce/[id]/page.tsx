@@ -640,7 +640,7 @@ export default function EditarCasoSIUCEPage() {
         <Card>
           <CardHeader>
             <CardTitle>Avances</CardTitle>
-            <CardDescription>Porcentaje de avance del caso (Avance General: {watch("avanceGeneral") || 0}%)</CardDescription>
+            <CardDescription>Avance General: {watch("avanceGeneral") || 0}% (promedio de Avance I.E. y Avance S.E.M.)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2">

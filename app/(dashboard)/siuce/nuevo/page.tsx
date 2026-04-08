@@ -227,9 +227,9 @@ export default function NuevoCasoSIUCEPage() {
 
   // Calcular avance general (suma de avances, máximo 100)
   useEffect(() => {
-    const total = Math.min(Math.max(avanceIE + avanceSEM, 0), 100)
-    setAvanceGeneral(total)
-    setValue("avanceGeneral", total)
+const promedio = Math.round((avanceIE + avanceSEM) / 2)
+  setAvanceGeneral(promedio)
+  setValue("avanceGeneral", promedio)
     
     // Calcular estado automáticamente
     const estado = calcularEstado(total)
@@ -729,7 +729,7 @@ export default function NuevoCasoSIUCEPage() {
                       <span className="text-lg font-bold">{avanceGeneral}%</span>
                     </div>
                     <Progress value={avanceGeneral} className="h-3" />
-                    <p className="text-xs text-slate-500">Suma de Avance I.E. + Avance S.E.M. (máx. 100%)</p>
+                    <p className="text-xs text-slate-500">Promedio de Avance I.E. y Avance S.E.M.</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Estado (Automático)</Label>
