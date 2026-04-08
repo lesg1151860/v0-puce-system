@@ -148,19 +148,18 @@ export function getDashboardStats(): DashboardStats {
   const casesSAC = getCasesSAC()
   const casesSIUCE = getCasesSIUCE()
 
-  // Contar estados de SAC
-  const sacNuevos = casesSAC.filter((c) => c.estado === "Nuevo").length
-  const sacEnSeguimiento = casesSAC.filter((c) => c.estado === "En Seguimiento").length
-  const sacResueltos = casesSAC.filter((c) => c.estado === "Resuelto").length
+  // Contar estados de SAC (EN SEGUIMIENTO, TERMINADO)
+  const sacEnSeguimiento = casesSAC.filter((c) => c.estado === "EN SEGUIMIENTO").length
+  const sacResueltos = casesSAC.filter((c) => c.estado === "TERMINADO").length
 
-  // Contar estados de SIUCE (mapear estados)
+  // Contar estados de SIUCE (PENDIENTE, EN PROGRESO, TERMINADO)
   const siuceNuevos = casesSIUCE.filter((c) => c.estado === "PENDIENTE").length
   const siuceEnSeguimiento = casesSIUCE.filter((c) => c.estado === "EN PROGRESO").length
   const siuceResueltos = casesSIUCE.filter((c) => c.estado === "TERMINADO").length
 
   return {
     totalCasos: casesSAC.length + casesSIUCE.length,
-    casosNuevos: sacNuevos + siuceNuevos,
+    casosNuevos: siuceNuevos, // Solo SIUCE tiene estado PENDIENTE como "nuevo"
     casosEnSeguimiento: sacEnSeguimiento + siuceEnSeguimiento,
     casosResueltos: sacResueltos + siuceResueltos,
     casosSAC: casesSAC.length,
@@ -180,29 +179,36 @@ export function seedDemoData(): void {
   if (existingSAC.length === 0) {
     const demoSAC: Omit<CasoSAC, "id" | "createdAt" | "updatedAt">[] = [
       {
-        radicado: "SAC-2024-001",
-        ciudadano: "María García López",
+        radicado: "CUC2024ER002434",
+        ciudadano: "MARÍA GARCÍA LÓPEZ",
         fechaRadicacion: "2024-01-15",
         rol: "Padre de Familia",
-        estado: "Resuelto",
-        estudiante: "Juan García",
-        situacion: "Caso de acoso escolar reportado",
-        sacRespuesta: "Se tomaron medidas correctivas",
+        estado: "TERMINADO",
+        estudiante: "JUAN GARCÍA",
+        situacion: "Tipo 2",
+        sacRespuesta: "SÍ",
+        trasladoIE: true,
+        institucionContraQuienSeDirige: "I.E. Simón Bolívar",
+        respondido: true,
+        contestacionIE: true,
       },
       {
-        radicado: "SAC-2024-002",
-        ciudadano: "Carlos Rodríguez",
+        radicado: "CUC2024ER002435",
+        ciudadano: "CARLOS RODRÍGUEZ",
         fechaRadicacion: "2024-02-20",
         rol: "Docente",
-        estado: "En Seguimiento",
-        situacion: "Conflicto entre estudiantes",
+        estado: "EN SEGUIMIENTO",
+        situacion: "Tipo 1",
+        sacRespuesta: "NO",
+        trasladoIE: true,
+        institucionContraQuienSeDirige: "I.E. Antonio Nariño",
       },
       {
-        radicado: "SAC-2024-003",
-        ciudadano: "Ana Martínez",
+        radicado: "CUC2024ER002436",
+        ciudadano: "ANA MARTÍNEZ",
         fechaRadicacion: "2024-03-10",
         rol: "Estudiante",
-        estado: "Nuevo",
+        estado: "EN SEGUIMIENTO",
       },
     ]
 
@@ -221,7 +227,7 @@ export function seedDemoData(): void {
         numeroIdentificacion: "1092537583",
         grado: "Octavo",
         danoPrincipal: "Psicológico",
-        tipoAgresion: "Verbal",
+        tipoAgresion: "Agresión Verbal",
         repetitivo: true,
         eventoGenerador: "Discriminación",
         rolAgresor: "Estudiante",
@@ -235,8 +241,10 @@ export function seedDemoData(): void {
         seguimientoPolicia: false,
         numeroSeguimientoPolicia: 0,
         cec: true,
-        avanceIE: 60,
-        avanceSEM: 40,
+        accionesIE: "Seguimiento a la ruta",
+        avanceIE: 75,
+        accionesSEM: "No se radicó",
+        avanceSEM: 0,
         descripcionAvance: "Se han realizado reuniones con padres de familia",
       },
       {
@@ -249,12 +257,12 @@ export function seedDemoData(): void {
         numeroIdentificacion: "1234567890",
         grado: "Quinto",
         danoPrincipal: "Físico",
-        tipoAgresion: "Física",
+        tipoAgresion: "Agresión física grave",
         repetitivo: false,
         eventoGenerador: "Conflicto",
         rolAgresor: "Estudiante",
         nombreAgresor: "MIGUEL TORRES",
-        clasificacion: "Tipo 1",
+        clasificacion: "Tipo 2",
         lugar: "Colegio",
         fechaOcurrencia: "2024-02-05",
         fechaRegistro: "2024-02-06",
@@ -263,14 +271,16 @@ export function seedDemoData(): void {
         seguimientoPolicia: false,
         numeroSeguimientoPolicia: 0,
         cec: false,
+        accionesIE: "Solución del caso",
         avanceIE: 100,
+        accionesSEM: "Archivo de la diligencia",
         avanceSEM: 100,
         descripcionAvance: "Caso cerrado satisfactoriamente",
       },
       {
         radicado: "35026",
-        avanceGeneral: 20,
-        estado: "PENDIENTE",
+        avanceGeneral: 14,
+        estado: "EN PROGRESO",
         ie: "I.E. Francisco de Paula Santander",
         victima: "SOFÍA HERRERA CASTRO",
         tipoIdentificacion: "TI",
@@ -278,7 +288,7 @@ export function seedDemoData(): void {
         grado: "Décimo",
         danoPrincipal: "Psicológico",
         danoSecundario: "Económico",
-        tipoAgresion: "Relacional",
+        tipoAgresion: "Agresión electrónica",
         repetitivo: true,
         eventoGenerador: "Discriminación",
         rolAgresor: "Estudiante",
@@ -292,8 +302,10 @@ export function seedDemoData(): void {
         seguimientoPolicia: false,
         numeroSeguimientoPolicia: 0,
         cec: false,
-        avanceIE: 10,
-        avanceSEM: 5,
+        accionesIE: "Sin acciones",
+        avanceIE: 0,
+        accionesSEM: "Radicación",
+        avanceSEM: 14.3,
       },
     ]
 

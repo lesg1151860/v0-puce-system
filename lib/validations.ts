@@ -27,8 +27,14 @@ const rolesOptions = [
   "ONG",
 ] as const
 
-// Estados de caso
-const estadosOptions = ["Nuevo", "En Seguimiento", "Resuelto"] as const
+// Estados de caso SAC
+const estadosSACOptions = ["EN SEGUIMIENTO", "TERMINADO"] as const
+
+// Situación SAC (clasificación)
+const situacionSACOptions = ["Tipo 1", "Tipo 2", "Tipo 3"] as const
+
+// SAC Respuesta
+const sacRespuestaOptions = ["ENVIADA", "NO", "SÍ"] as const
 
 // Esquema básico de caso SAC (registro inicial)
 export const casoSACBasicoSchema = z.object({
@@ -36,23 +42,24 @@ export const casoSACBasicoSchema = z.object({
   ciudadano: z.string().min(1, "El ciudadano es requerido"),
   fechaRadicacion: z.string().min(1, "La fecha de radicación es requerida"),
   rol: z.enum(rolesOptions, { errorMap: () => ({ message: "Selecciona un rol" }) }),
-  estado: z.enum(estadosOptions, { errorMap: () => ({ message: "Selecciona un estado" }) }),
+  estado: z.enum(estadosSACOptions, { errorMap: () => ({ message: "Selecciona un estado" }) }),
 })
 
 // Esquema extendido de caso SAC (edición completa)
 export const casoSACExtendidoSchema = casoSACBasicoSchema.extend({
-  trasladoIE: z.string().optional(),
+  radicadoRespuesta: z.string().optional(),
+  trasladoIE: z.boolean().optional(),
   radicadoExterna: z.string().optional(),
-  respondido: z.string().optional(),
-  prorroga: z.string().optional(),
+  respondido: z.boolean().optional(),
+  prorroga: z.boolean().optional(),
   fechaNuevaProrroga: z.string().optional(),
   radicadoProrroga: z.string().optional(),
-  contestacionIE: z.string().optional(),
+  contestacionIE: z.boolean().optional(),
   radicadoContestacion: z.string().optional(),
   estudiante: z.string().optional(),
   institucionContraQuienSeDirige: z.string().optional(),
-  situacion: z.string().optional(),
-  sacRespuesta: z.string().optional(),
+  situacion: z.enum(situacionSACOptions).optional(),
+  sacRespuesta: z.enum(sacRespuestaOptions).optional(),
 })
 
 // Tipos de identificación
@@ -77,8 +84,21 @@ const gradoOptions = [
 // Tipos de daño
 const tipoDanoOptions = ["Físico", "Psicológico", "Sexual", "Económico", ""] as const
 
-// Tipos de agresión
-const tipoAgresionOptions = ["Verbal", "Física", "Gestual", "Relacional", ""] as const
+// Tipos de agresión (según reglas de negocio)
+const tipoAgresionOptions = [
+  "Hurto",
+  "Acoso escolar", 
+  "Violencia Intrafamiliar", 
+  "Agresión física grave", 
+  "Agresión física reiterada",
+  "Acoso sexual", 
+  "Sexteo", 
+  "Violencia sexual",
+  "Agresión Verbal",
+  "Agresión gestual",
+  "Agresión electrónica",
+  "",
+] as const
 
 // Clasificación
 const clasificacionOptions = ["Tipo 1", "Tipo 2", "Tipo 3"] as const

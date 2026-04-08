@@ -43,12 +43,11 @@ import {
 import { Badge } from "@/components/ui/badge"
 
 import { getCasesSAC, deleteCaseSAC } from "@/lib/storage"
-import type { CasoSAC, EstadoCaso } from "@/lib/types"
+import type { CasoSAC, EstadoSAC } from "@/lib/types"
 
-const estadoBadgeStyles: Record<EstadoCaso, string> = {
-  "Nuevo": "bg-yellow-100 text-yellow-800 border-yellow-200",
-  "En Seguimiento": "bg-blue-100 text-blue-800 border-blue-200",
-  "Resuelto": "bg-green-100 text-green-800 border-green-200",
+const estadoBadgeStyles: Record<EstadoSAC, string> = {
+  "EN SEGUIMIENTO": "bg-blue-100 text-blue-800 border-blue-200",
+  "TERMINADO": "bg-green-100 text-green-800 border-green-200",
 }
 
 export default function SACListPage() {
@@ -137,9 +136,8 @@ export default function SACListPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos los estados</SelectItem>
-                  <SelectItem value="Nuevo">Nuevo</SelectItem>
-                  <SelectItem value="En Seguimiento">En Seguimiento</SelectItem>
-                  <SelectItem value="Resuelto">Resuelto</SelectItem>
+                  <SelectItem value="EN SEGUIMIENTO">En Seguimiento</SelectItem>
+                  <SelectItem value="TERMINADO">Terminado</SelectItem>
                 </SelectContent>
               </Select>
             </div>

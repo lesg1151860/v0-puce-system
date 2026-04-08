@@ -47,7 +47,20 @@ const grados = [
 
 const tiposDano = ["Físico", "Psicológico", "Sexual", "Económico"] as const
 
-const tiposAgresion = ["Verbal", "Física", "Gestual", "Relacional"] as const
+// Tipos de agresión según reglas de negocio
+const tiposAgresion = [
+  "Hurto",
+  "Acoso escolar", 
+  "Violencia Intrafamiliar", 
+  "Agresión física grave", 
+  "Agresión física reiterada",
+  "Acoso sexual", 
+  "Sexteo", 
+  "Violencia sexual",
+  "Agresión Verbal",
+  "Agresión gestual",
+  "Agresión electrónica",
+] as const
 
 const eventosGeneradores = ["Consumo de SPA", "Discriminación", "Conflicto", "Otro"] as const
 
@@ -57,7 +70,67 @@ const lugares = ["Calle", "Casa", "Colegio", "Redes Sociales"] as const
 
 const estadosSIUCE = ["EN PROGRESO", "PENDIENTE", "TERMINADO"] as const
 
-// Función para calcular clasificación
+// Acciones I.E. con sus porcentajes
+const accionesIE = [
+  { label: "Sin acciones", value: 0 },
+  { label: "Entrevista estudiantes", value: 12.5 },
+  { label: "Citación de los padres", value: 25 },
+  { label: "Atención orientación escolar", value: 37.5 },
+  { label: "Activación de ruta de CE", value: 50 },
+  { label: "Llamado de atención y reporte", value: 62.5 },
+  { label: "Seguimiento a la ruta", value: 75 },
+  { label: "Taller pedagógico", value: 87.5 },
+  { label: "Solución del caso", value: 100 },
+  { label: "Suspensión pedagógica", value: -25 },
+  { label: "Reubicación de docente", value: -50 },
+  { label: "Traslado de estudiante", value: -75 },
+  { label: "Cancelación de matrícula", value: -100 },
+] as const
+
+// Acciones S.E.M. con sus porcentajes
+const accionesSEM = [
+  { label: "No se radicó", value: 0 },
+  { label: "Radicación", value: 14.3 },
+  { label: "Requerimiento activación de ruta", value: 28.6 },
+  { label: "Citación de las partes", value: 42.9 },
+  { label: "Acompañamiento Comité Escolar", value: 57.1 },
+  { label: "Charla/intervención en la IE", value: 71.4 },
+  { label: "Charla pedagógica", value: 71.4 },
+  { label: "Traslado del docente", value: 85.7 },
+  { label: "Archivo de la diligencia", value: 100 },
+] as const
+
+// Tipos de agresión con su daño asociado según reglas de negocio
+const tiposAgresionConDano: Record<string, { agresiones: string[], dano: string }> = {
+  "Económico": { 
+    agresiones: ["Hurto"], 
+    dano: "Económico" 
+  },
+  "Físico": { 
+    agresiones: ["Acoso escolar", "Violencia Intrafamiliar", "Agresión física grave", "Agresión física reiterada"], 
+    dano: "Físico" 
+  },
+  "Sexual": { 
+    agresiones: ["Acoso sexual", "Sexteo", "Violencia sexual"], 
+    dano: "Sexual" 
+  },
+  "Psicológico": { 
+    agresiones: ["Agresión Verbal", "Agresión gestual", "Violencia Intrafamiliar", "Agresión electrónica"], 
+    dano: "Psicológico" 
+  },
+}
+
+// Función para obtener el daño automático basado en el tipo de agresión
+function getDanoAutomatico(tipoAgresion: string): string | undefined {
+  for (const [, config] of Object.entries(tiposAgresionConDano)) {
+    if (config.agresiones.includes(tipoAgresion)) {
+      return config.dano
+    }
+  }
+  return undefined
+}
+
+// Función para calcular clasificación según Ley 1620
 function calcularClasificacion(
   danoPrincipal: string,
   danoSecundario?: string,
@@ -70,7 +143,17 @@ function calcularClasificacion(
   if (repetitivo || (danoPrincipal === "Físico" && (danoSecundario || danoTerciario))) {
     return "Tipo 2"
   }
+  if (danoPrincipal === "Físico") {
+    return "Tipo 2"
+  }
   return "Tipo 1"
+}
+
+// Función para calcular el estado basado en el avance general
+function calcularEstado(avanceGeneral: number): "PENDIENTE" | "EN PROGRESO" | "TERMINADO" {
+  if (avanceGeneral === 0) return "PENDIENTE"
+  if (avanceGeneral >= 100) return "TERMINADO"
+  return "EN PROGRESO"
 }
 
 export default function EditarCasoSIUCEPage() {

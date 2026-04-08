@@ -39,8 +39,20 @@ export type Grado =
 // Tipos de daño
 export type TipoDano = "Físico" | "Psicológico" | "Sexual" | "Económico" | ""
 
-// Tipos de agresión
-export type TipoAgresion = "Verbal" | "Física" | "Gestual" | "Relacional" | ""
+// Tipos de agresión (según reglas de negocio)
+export type TipoAgresion = 
+  | "Hurto"
+  | "Acoso escolar"
+  | "Violencia Intrafamiliar"
+  | "Agresión física grave"
+  | "Agresión física reiterada"
+  | "Acoso sexual"
+  | "Sexteo"
+  | "Violencia sexual"
+  | "Agresión Verbal"
+  | "Agresión gestual"
+  | "Agresión electrónica"
+  | ""
 
 // Clasificación del caso según Ley 1620
 export type ClasificacionCaso = "Tipo 1" | "Tipo 2" | "Tipo 3"
@@ -60,28 +72,38 @@ export type RolAgresor =
   | "Desconocido"
   | "Vecino"
 
+// SAC Respuesta
+export type SACRespuestaEstado = "ENVIADA" | "NO" | "SÍ"
+
+// Estado SAC
+export type EstadoSAC = "EN SEGUIMIENTO" | "TERMINADO"
+
+// Situación SAC (clasificación según gravedad)
+export type SituacionSAC = "Tipo 1" | "Tipo 2" | "Tipo 3"
+
 // Interfaz para casos SAC
 export interface CasoSAC {
   id: string
   // Campos básicos (registro inicial)
-  radicado: string
-  ciudadano: string
-  fechaRadicacion: string
+  radicado: string // CUCYYYY###### Ej: CUC2024ER002434
+  ciudadano: string // Texto en Mayúsculas
+  fechaRadicacion: string // DD-MM-AAAA
+  radicadoRespuesta?: string // CUCYYYYEE###### - Código del documento final
   rol: RolCiudadano
-  estado: EstadoCaso
+  estado: EstadoSAC
   // Campos extendidos (edición)
-  trasladoIE?: string
-  radicadoExterna?: string
-  respondido?: string
-  prorroga?: string
-  fechaNuevaProrroga?: string
-  radicadoProrroga?: string
-  contestacionIE?: string
-  radicadoContestacion?: string
-  estudiante?: string
-  institucionContraQuienSeDirige?: string
-  situacion?: string
-  sacRespuesta?: string
+  trasladoIE?: boolean // SI/NO - Si fue remitido a una I.E.
+  radicadoExterna?: string // CUCYYYYEE###### - Código del oficio enviado
+  respondido?: boolean // SI/NO - Si el ciudadano ya recibió respuesta
+  prorroga?: boolean // SI/NO - Si requirió ampliación de términos
+  fechaNuevaProrroga?: string // DD-MM-AAAA - Solo si prorroga es SI
+  radicadoProrroga?: string // CUCYYYYEE###### - Solo si prorroga es SI
+  contestacionIE?: boolean // SI/NO - Si la I.E. envió su respuesta
+  radicadoContestacion?: string // CUCYYYYER###### - Código del radicado de contestación
+  estudiante?: string // Texto en Mayúsculas - Nombre del estudiante involucrado
+  institucionContraQuienSeDirige?: string // Nombre oficial de la I.E.
+  situacion?: SituacionSAC // Tipo 1, 2 o 3 según gravedad
+  sacRespuesta?: SACRespuestaEstado // ENVIADA, NO, SÍ
   // Metadatos
   createdAt: string
   updatedAt: string

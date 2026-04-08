@@ -37,7 +37,7 @@ const roles = [
   "ONG",
 ] as const
 
-const estados = ["Nuevo", "En Seguimiento", "Resuelto"] as const
+const estados = ["EN SEGUIMIENTO", "TERMINADO"] as const
 
 export default function NuevoCasoSACPage() {
   const router = useRouter()
@@ -52,7 +52,7 @@ export default function NuevoCasoSACPage() {
   } = useForm<CasoSACBasicoFormData>({
     resolver: zodResolver(casoSACBasicoSchema),
     defaultValues: {
-      estado: "Nuevo",
+      estado: "EN SEGUIMIENTO",
     },
   })
 
@@ -106,7 +106,7 @@ export default function NuevoCasoSACPage() {
                 <Label htmlFor="radicado">Radicado *</Label>
                 <Input
                   id="radicado"
-                  placeholder="Ej: SAC-2024-001"
+                  placeholder="Ej: CUC2024ER002434"
                   {...register("radicado")}
                   className={errors.radicado ? "border-red-500" : ""}
                 />
@@ -119,9 +119,10 @@ export default function NuevoCasoSACPage() {
                 <Label htmlFor="ciudadano">Ciudadano *</Label>
                 <Input
                   id="ciudadano"
-                  placeholder="Nombre de la persona que reporta"
+                  placeholder="Nombre en mayúsculas"
                   {...register("ciudadano")}
                   className={errors.ciudadano ? "border-red-500" : ""}
+                  style={{ textTransform: "uppercase" }}
                 />
                 {errors.ciudadano && (
                   <p className="text-sm text-red-500">{errors.ciudadano.message}</p>
@@ -163,7 +164,7 @@ export default function NuevoCasoSACPage() {
               <div className="space-y-2">
                 <Label htmlFor="estado">Estado *</Label>
                 <Select
-                  defaultValue="Nuevo"
+                  defaultValue="EN SEGUIMIENTO"
                   onValueChange={(value) => setValue("estado", value as CasoSACBasicoFormData["estado"])}
                 >
                   <SelectTrigger className={errors.estado ? "border-red-500" : ""}>

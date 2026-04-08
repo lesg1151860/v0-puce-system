@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
-import { ArrowLeft, Loader2, Save } from "lucide-react"
+import { ArrowLeft, Loader2, Save, Info } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Slider } from "@/components/ui/slider"
+import { Progress } from "@/components/ui/progress"
 import {
   Select,
   SelectContent,
@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 
 import { casoSIUCESchema, type CasoSIUCEFormData } from "@/lib/validations"
 import { createCaseSIUCE } from "@/lib/storage"
@@ -33,6 +34,7 @@ const instituciones = [
   "I.E. Francisco de Paula Santander",
   "I.E. Policarpa Salavarrieta",
   "I.E. Rafael Uribe Uribe",
+  "I.E. José María Córdoba",
   "Otra",
 ] as const
 
@@ -45,15 +47,86 @@ const grados = [
 
 const tiposDano = ["Físico", "Psicológico", "Sexual", "Económico"] as const
 
-const tiposAgresion = ["Verbal", "Física", "Gestual", "Relacional"] as const
+// Tipos de agresión con su daño asociado según reglas de negocio
+const tiposAgresionConDano: Record<string, { agresiones: string[], dano: string }> = {
+  "Económico": { 
+    agresiones: ["Hurto"], 
+    dano: "Económico" 
+  },
+  "Físico": { 
+    agresiones: ["Acoso escolar", "Violencia Intrafamiliar", "Agresión física grave", "Agresión física reiterada"], 
+    dano: "Físico" 
+  },
+  "Sexual": { 
+    agresiones: ["Acoso sexual", "Sexteo", "Violencia sexual"], 
+    dano: "Sexual" 
+  },
+  "Psicológico": { 
+    agresiones: ["Agresión Verbal", "Agresión gestual", "Violencia Intrafamiliar", "Agresión electrónica"], 
+    dano: "Psicológico" 
+  },
+}
+
+// Lista plana de todas las agresiones
+const tiposAgresion = [
+  "Hurto",
+  "Acoso escolar", 
+  "Violencia Intrafamiliar", 
+  "Agresión física grave", 
+  "Agresión física reiterada",
+  "Acoso sexual", 
+  "Sexteo", 
+  "Violencia sexual",
+  "Agresión Verbal",
+  "Agresión gestual",
+  "Agresión electrónica",
+] as const
 
 const eventosGeneradores = ["Consumo de SPA", "Discriminación", "Conflicto", "Otro"] as const
-
 const rolesAgresor = ["Estudiante", "Docente", "Familiar", "Administrativo", "Desconocido", "Vecino"] as const
-
 const lugares = ["Calle", "Casa", "Colegio", "Redes Sociales"] as const
 
-// Función para calcular clasificación automáticamente
+// Acciones I.E. con sus porcentajes
+const accionesIE = [
+  { label: "Sin acciones", value: 0 },
+  { label: "Entrevista estudiantes", value: 12.5 },
+  { label: "Citación de los padres", value: 25 },
+  { label: "Atención orientación escolar", value: 37.5 },
+  { label: "Activación de ruta de CE", value: 50 },
+  { label: "Llamado de atención y reporte", value: 62.5 },
+  { label: "Seguimiento a la ruta", value: 75 },
+  { label: "Taller pedagógico", value: 87.5 },
+  { label: "Solución del caso", value: 100 },
+  { label: "Suspensión pedagógica", value: -25 },
+  { label: "Reubicación de docente", value: -50 },
+  { label: "Traslado de estudiante", value: -75 },
+  { label: "Cancelación de matrícula", value: -100 },
+] as const
+
+// Acciones S.E.M. con sus porcentajes
+const accionesSEM = [
+  { label: "No se radicó", value: 0 },
+  { label: "Radicación", value: 14.3 },
+  { label: "Requerimiento activación de ruta", value: 28.6 },
+  { label: "Citación de las partes", value: 42.9 },
+  { label: "Acompañamiento Comité Escolar", value: 57.1 },
+  { label: "Charla/intervención en la IE", value: 71.4 },
+  { label: "Charla pedagógica", value: 71.4 },
+  { label: "Traslado del docente", value: 85.7 },
+  { label: "Archivo de la diligencia", value: 100 },
+] as const
+
+// Función para obtener el daño automático basado en el tipo de agresión
+function getDanoAutomatico(tipoAgresion: string): string | undefined {
+  for (const [, config] of Object.entries(tiposAgresionConDano)) {
+    if (config.agresiones.includes(tipoAgresion)) {
+      return config.dano
+    }
+  }
+  return undefined
+}
+
+// Función para calcular clasificación automáticamente según Ley 1620
 function calcularClasificacion(
   danoPrincipal: string,
   danoSecundario?: string,
@@ -64,12 +137,23 @@ function calcularClasificacion(
   if (danoPrincipal === "Sexual" || danoSecundario === "Sexual" || danoTerciario === "Sexual") {
     return "Tipo 3"
   }
-  // Si es repetitivo o hay múltiples daños graves, es Tipo 2
+  // Si es repetitivo o hay daño físico con otros daños, es Tipo 2
   if (repetitivo || (danoPrincipal === "Físico" && (danoSecundario || danoTerciario))) {
     return "Tipo 2"
   }
-  // Caso básico
+  // Si hay daño físico grave solo, puede ser Tipo 2
+  if (danoPrincipal === "Físico") {
+    return "Tipo 2"
+  }
+  // Caso básico - psicológico o económico sin agravantes
   return "Tipo 1"
+}
+
+// Función para calcular el estado basado en el avance general
+function calcularEstado(avanceGeneral: number): "PENDIENTE" | "EN PROGRESO" | "TERMINADO" {
+  if (avanceGeneral === 0) return "PENDIENTE"
+  if (avanceGeneral >= 100) return "TERMINADO"
+  return "EN PROGRESO"
 }
 
 export default function NuevoCasoSIUCEPage() {
@@ -77,8 +161,16 @@ export default function NuevoCasoSIUCEPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [showOtroEvento, setShowOtroEvento] = useState(false)
+  
+  // Estados para seguimientos condicionales
+  const [seguimientoIE, setSeguimientoIE] = useState(false)
+  const [seguimientoPolicia, setSeguimientoPolicia] = useState(false)
+  
+  // Estados para avances
   const [avanceIE, setAvanceIE] = useState(0)
   const [avanceSEM, setAvanceSEM] = useState(0)
+  const [avanceGeneral, setAvanceGeneral] = useState(0)
+  const [estadoCalculado, setEstadoCalculado] = useState<"PENDIENTE" | "EN PROGRESO" | "TERMINADO">("PENDIENTE")
 
   const {
     register,
@@ -90,7 +182,7 @@ export default function NuevoCasoSIUCEPage() {
     resolver: zodResolver(casoSIUCESchema),
     defaultValues: {
       avanceGeneral: 0,
-      estado: "EN PROGRESO",
+      estado: "PENDIENTE",
       repetitivo: false,
       seguimientoIE: false,
       numeroSeguimientoIE: 0,
@@ -103,11 +195,22 @@ export default function NuevoCasoSIUCEPage() {
     },
   })
 
+  const tipoAgresion = watch("tipoAgresion")
   const danoPrincipal = watch("danoPrincipal")
   const danoSecundario = watch("danoSecundario")
   const danoTerciario = watch("danoTerciario")
   const repetitivo = watch("repetitivo")
   const eventoGenerador = watch("eventoGenerador")
+
+  // Actualizar daño automáticamente cuando cambia el tipo de agresión
+  useEffect(() => {
+    if (tipoAgresion) {
+      const danoAutomatico = getDanoAutomatico(tipoAgresion)
+      if (danoAutomatico) {
+        setValue("danoPrincipal", danoAutomatico as CasoSIUCEFormData["danoPrincipal"])
+      }
+    }
+  }, [tipoAgresion, setValue])
 
   // Actualizar clasificación automáticamente
   useEffect(() => {
@@ -122,19 +225,16 @@ export default function NuevoCasoSIUCEPage() {
     setShowOtroEvento(eventoGenerador === "Otro")
   }, [eventoGenerador])
 
-  // Calcular avance general
+  // Calcular avance general (suma de avances, máximo 100)
   useEffect(() => {
-    const avanceGeneral = Math.round((avanceIE + avanceSEM) / 2)
-    setValue("avanceGeneral", avanceGeneral)
+    const total = Math.min(Math.max(avanceIE + avanceSEM, 0), 100)
+    setAvanceGeneral(total)
+    setValue("avanceGeneral", total)
     
-    // Actualizar estado automáticamente
-    if (avanceGeneral === 100) {
-      setValue("estado", "TERMINADO")
-    } else if (avanceGeneral > 0) {
-      setValue("estado", "EN PROGRESO")
-    } else {
-      setValue("estado", "PENDIENTE")
-    }
+    // Calcular estado automáticamente
+    const estado = calcularEstado(total)
+    setEstadoCalculado(estado)
+    setValue("estado", estado)
   }, [avanceIE, avanceSEM, setValue])
 
   const onSubmit = async (data: CasoSIUCEFormData) => {
@@ -261,7 +361,7 @@ export default function NuevoCasoSIUCEPage() {
                 <Label htmlFor="numeroIdentificacion">Número de Identificación *</Label>
                 <Input
                   id="numeroIdentificacion"
-                  placeholder="Sin separadores"
+                  placeholder="Sin separadores (Ej: 1092537583)"
                   {...register("numeroIdentificacion")}
                   className={errors.numeroIdentificacion ? "border-red-500" : ""}
                 />
@@ -286,27 +386,40 @@ export default function NuevoCasoSIUCEPage() {
           </CardContent>
         </Card>
 
-        {/* Tipos de Daño y Agresión */}
+        {/* Tipo de Agresión y Daño */}
         <Card>
           <CardHeader>
-            <CardTitle>Tipos de Daño y Agresión</CardTitle>
-            <CardDescription>Clasificación según la Ley 1620 de 2013</CardDescription>
+            <CardTitle>Tipo de Agresión y Daño</CardTitle>
+            <CardDescription>
+              El tipo de daño se selecciona automáticamente según el tipo de agresión (Ley 1620 de 2013)
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="danoPrincipal">Daño Principal *</Label>
-                <Select onValueChange={(value) => setValue("danoPrincipal", value as CasoSIUCEFormData["danoPrincipal"])}>
-                  <SelectTrigger className={errors.danoPrincipal ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Selecciona el daño" />
+                <Label htmlFor="tipoAgresion">Tipo de Agresión *</Label>
+                <Select onValueChange={(value) => setValue("tipoAgresion", value as CasoSIUCEFormData["tipoAgresion"])}>
+                  <SelectTrigger className={errors.tipoAgresion ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Selecciona el tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {tiposDano.map((dano) => (
-                      <SelectItem key={dano} value={dano}>{dano}</SelectItem>
+                    {tiposAgresion.map((tipo) => (
+                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.danoPrincipal && <p className="text-sm text-red-500">{errors.danoPrincipal.message}</p>}
+                {errors.tipoAgresion && <p className="text-sm text-red-500">{errors.tipoAgresion.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="danoPrincipal">Daño Principal (Automático)</Label>
+                <div className="flex items-center h-10 px-3 rounded-md border bg-slate-50">
+                  <span className="font-medium">{danoPrincipal || "Se asigna al seleccionar agresión"}</span>
+                </div>
+                <p className="text-xs text-slate-500 flex items-center gap-1">
+                  <Info className="h-3 w-3" />
+                  Calculado según tipo de agresión
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -337,21 +450,6 @@ export default function NuevoCasoSIUCEPage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tipoAgresion">Tipo de Agresión *</Label>
-                <Select onValueChange={(value) => setValue("tipoAgresion", value as CasoSIUCEFormData["tipoAgresion"])}>
-                  <SelectTrigger className={errors.tipoAgresion ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Selecciona tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tiposAgresion.map((tipo) => (
-                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.tipoAgresion && <p className="text-sm text-red-500">{errors.tipoAgresion.message}</p>}
               </div>
 
               <div className="space-y-2">
@@ -386,6 +484,20 @@ export default function NuevoCasoSIUCEPage() {
                   onCheckedChange={(checked) => setValue("repetitivo", checked)}
                 />
                 <Label htmlFor="repetitivo">¿Es conducta repetitiva?</Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Clasificación (Automática)</Label>
+                <div className="flex items-center h-10 px-3 rounded-md border bg-slate-50">
+                  <Badge variant="outline" className={
+                    watch("clasificacion") === "Tipo 3" ? "bg-red-100 text-red-800 border-red-200" :
+                    watch("clasificacion") === "Tipo 2" ? "bg-orange-100 text-orange-800 border-orange-200" :
+                    "bg-yellow-100 text-yellow-800 border-yellow-200"
+                  }>
+                    {watch("clasificacion") || "Tipo 1"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-500">Calculada según Ley 1620 de 2013</p>
               </div>
             </div>
           </CardContent>
@@ -451,14 +563,6 @@ export default function NuevoCasoSIUCEPage() {
                 />
                 {errors.fechaOcurrencia && <p className="text-sm text-red-500">{errors.fechaOcurrencia.message}</p>}
               </div>
-
-              <div className="space-y-2">
-                <Label>Clasificación (Automática)</Label>
-                <div className="flex items-center h-10 px-3 rounded-md border bg-slate-50">
-                  <span className="font-medium">{watch("clasificacion") || "Tipo 1"}</span>
-                </div>
-                <p className="text-xs text-slate-500">Calculada según Ley 1620</p>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -467,7 +571,7 @@ export default function NuevoCasoSIUCEPage() {
         <Card>
           <CardHeader>
             <CardTitle>Seguimientos</CardTitle>
-            <CardDescription>Acciones de seguimiento del caso</CardDescription>
+            <CardDescription>Acciones de seguimiento del caso por parte de I.E. y Policía</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -475,38 +579,56 @@ export default function NuevoCasoSIUCEPage() {
                 <div className="flex items-center space-x-3">
                   <Switch
                     id="seguimientoIE"
-                    onCheckedChange={(checked) => setValue("seguimientoIE", checked)}
+                    checked={seguimientoIE}
+                    onCheckedChange={(checked) => {
+                      setSeguimientoIE(checked)
+                      setValue("seguimientoIE", checked)
+                      if (!checked) {
+                        setValue("numeroSeguimientoIE", 0)
+                      }
+                    }}
                   />
                   <Label htmlFor="seguimientoIE">Seguimiento I.E.</Label>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="numeroSeguimientoIE">Número de Seguimientos I.E.</Label>
-                  <Input
-                    id="numeroSeguimientoIE"
-                    type="number"
-                    min="0"
-                    {...register("numeroSeguimientoIE", { valueAsNumber: true })}
-                  />
-                </div>
+                {seguimientoIE && (
+                  <div className="space-y-2">
+                    <Label htmlFor="numeroSeguimientoIE">Número de Seguimientos I.E.</Label>
+                    <Input
+                      id="numeroSeguimientoIE"
+                      type="number"
+                      min="0"
+                      {...register("numeroSeguimientoIE", { valueAsNumber: true })}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <Switch
                     id="seguimientoPolicia"
-                    onCheckedChange={(checked) => setValue("seguimientoPolicia", checked)}
+                    checked={seguimientoPolicia}
+                    onCheckedChange={(checked) => {
+                      setSeguimientoPolicia(checked)
+                      setValue("seguimientoPolicia", checked)
+                      if (!checked) {
+                        setValue("numeroSeguimientoPolicia", 0)
+                      }
+                    }}
                   />
                   <Label htmlFor="seguimientoPolicia">Seguimiento Policía</Label>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="numeroSeguimientoPolicia">Número de Seguimientos Policía</Label>
-                  <Input
-                    id="numeroSeguimientoPolicia"
-                    type="number"
-                    min="0"
-                    {...register("numeroSeguimientoPolicia", { valueAsNumber: true })}
-                  />
-                </div>
+                {seguimientoPolicia && (
+                  <div className="space-y-2">
+                    <Label htmlFor="numeroSeguimientoPolicia">Número de Seguimientos Policía</Label>
+                    <Input
+                      id="numeroSeguimientoPolicia"
+                      type="number"
+                      min="0"
+                      {...register("numeroSeguimientoPolicia", { valueAsNumber: true })}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -522,48 +644,109 @@ export default function NuevoCasoSIUCEPage() {
           </CardContent>
         </Card>
 
-        {/* Avances */}
+        {/* Acciones y Avances */}
         <Card>
           <CardHeader>
-            <CardTitle>Avances</CardTitle>
-            <CardDescription>Porcentaje de avance del caso</CardDescription>
+            <CardTitle>Acciones y Avances</CardTitle>
+            <CardDescription>
+              Los porcentajes de avance se calculan automáticamente según las acciones seleccionadas
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2">
+              {/* Acciones I.E. */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="avanceIE">Avance I.E.</Label>
-                  <span className="text-sm font-medium">{avanceIE}%</span>
+                <div className="space-y-2">
+                  <Label htmlFor="accionesIE">Acciones de I.E.</Label>
+                  <Select onValueChange={(value) => {
+                    const accion = accionesIE.find(a => a.label === value)
+                    if (accion) {
+                      setValue("accionesIE", value)
+                      setAvanceIE(accion.value)
+                      setValue("avanceIE", accion.value)
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona la acción" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accionesIE.map((accion) => (
+                        <SelectItem key={accion.label} value={accion.label}>
+                          {accion.label} ({accion.value}%)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Slider
-                  id="avanceIE"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={[avanceIE]}
-                  onValueChange={(value) => {
-                    setAvanceIE(value[0])
-                    setValue("avanceIE", value[0])
-                  }}
-                />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Avance I.E.</span>
+                    <span className="font-medium">{avanceIE}%</span>
+                  </div>
+                  <Progress value={Math.max(avanceIE, 0)} className="h-2" />
+                </div>
               </div>
 
+              {/* Acciones S.E.M. */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="avanceSEM">Avance S.E.M.</Label>
-                  <span className="text-sm font-medium">{avanceSEM}%</span>
+                <div className="space-y-2">
+                  <Label htmlFor="accionesSEM">Acciones de S.E.M.</Label>
+                  <Select onValueChange={(value) => {
+                    const accion = accionesSEM.find(a => a.label === value)
+                    if (accion) {
+                      setValue("accionesSEM", value)
+                      setAvanceSEM(accion.value)
+                      setValue("avanceSEM", accion.value)
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona la acción" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accionesSEM.map((accion) => (
+                        <SelectItem key={accion.label} value={accion.label}>
+                          {accion.label} ({accion.value}%)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Slider
-                  id="avanceSEM"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={[avanceSEM]}
-                  onValueChange={(value) => {
-                    setAvanceSEM(value[0])
-                    setValue("avanceSEM", value[0])
-                  }}
-                />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Avance S.E.M.</span>
+                    <span className="font-medium">{avanceSEM}%</span>
+                  </div>
+                  <Progress value={avanceSEM} className="h-2" />
+                </div>
+              </div>
+
+              {/* Avance General y Estado */}
+              <div className="sm:col-span-2 p-4 rounded-lg bg-slate-50 border">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Avance General (Automático)</Label>
+                      <span className="text-lg font-bold">{avanceGeneral}%</span>
+                    </div>
+                    <Progress value={avanceGeneral} className="h-3" />
+                    <p className="text-xs text-slate-500">Suma de Avance I.E. + Avance S.E.M. (máx. 100%)</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Estado (Automático)</Label>
+                    <div className="flex items-center h-10">
+                      <Badge variant="outline" className={
+                        estadoCalculado === "TERMINADO" ? "bg-green-100 text-green-800 border-green-200" :
+                        estadoCalculado === "EN PROGRESO" ? "bg-blue-100 text-blue-800 border-blue-200" :
+                        "bg-yellow-100 text-yellow-800 border-yellow-200"
+                      }>
+                        {estadoCalculado}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      0% = PENDIENTE | 1-99% = EN PROGRESO | 100% = TERMINADO
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="sm:col-span-2 space-y-2">
@@ -573,6 +756,34 @@ export default function NuevoCasoSIUCEPage() {
                   placeholder="Describe las acciones realizadas..."
                   rows={3}
                   {...register("descripcionAvance")}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Entidades Externas */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Entidades Externas</CardTitle>
+            <CardDescription>Respuesta de la SEM a la I.E.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="entidadesExternas">Radicado Entidades Externas</Label>
+                <Input
+                  id="entidadesExternas"
+                  placeholder="Ej: CUC2024EE002434"
+                  {...register("entidadesExternas")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fechaRadicadoExternas">Fecha de Respuesta</Label>
+                <Input
+                  id="fechaRadicadoExternas"
+                  type="date"
+                  {...register("fechaRadicadoExternas")}
                 />
               </div>
             </div>

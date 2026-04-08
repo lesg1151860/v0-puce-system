@@ -9,9 +9,9 @@ import { ArrowLeft, Loader2, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
 
 import { casoSACExtendidoSchema, type CasoSACExtendidoFormData } from "@/lib/validations"
 import { getCaseSAC, updateCaseSAC } from "@/lib/storage"
@@ -40,7 +39,20 @@ const roles = [
   "ONG",
 ] as const
 
-const estados = ["Nuevo", "En Seguimiento", "Resuelto"] as const
+const estados = ["EN SEGUIMIENTO", "TERMINADO"] as const
+const situaciones = ["Tipo 1", "Tipo 2", "Tipo 3"] as const
+const sacRespuestas = ["ENVIADA", "NO", "SÍ"] as const
+
+const instituciones = [
+  "I.E. Simón Bolívar",
+  "I.E. Antonio Nariño",
+  "I.E. Francisco de Paula Santander",
+  "I.E. Policarpa Salavarrieta",
+  "I.E. Rafael Uribe Uribe",
+  "I.E. José María Córdoba",
+  "I.E. María Auxiliadora",
+  "Otra",
+] as const
 
 export default function EditarCasoSACPage() {
   const router = useRouter()
@@ -51,6 +63,12 @@ export default function EditarCasoSACPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [notFound, setNotFound] = useState(false)
+  
+  // Estados para campos condicionales
+  const [trasladoIE, setTrasladoIE] = useState(false)
+  const [prorroga, setProrroga] = useState(false)
+  const [contestacionIE, setContestacionIE] = useState(false)
+  const [respondido, setRespondido] = useState(false)
 
   const {
     register,
@@ -66,25 +84,32 @@ export default function EditarCasoSACPage() {
     const data = getCaseSAC(id)
     if (data) {
       setCaso(data)
+      // Set conditional states
+      setTrasladoIE(data.trasladoIE || false)
+      setProrroga(data.prorroga || false)
+      setContestacionIE(data.contestacionIE || false)
+      setRespondido(data.respondido || false)
+      
       // Reset form with existing data
       reset({
         radicado: data.radicado,
         ciudadano: data.ciudadano,
         fechaRadicacion: data.fechaRadicacion,
+        radicadoRespuesta: data.radicadoRespuesta || "",
         rol: data.rol,
         estado: data.estado,
-        trasladoIE: data.trasladoIE || "",
+        trasladoIE: data.trasladoIE || false,
         radicadoExterna: data.radicadoExterna || "",
-        respondido: data.respondido || "",
-        prorroga: data.prorroga || "",
+        respondido: data.respondido || false,
+        prorroga: data.prorroga || false,
         fechaNuevaProrroga: data.fechaNuevaProrroga || "",
         radicadoProrroga: data.radicadoProrroga || "",
-        contestacionIE: data.contestacionIE || "",
+        contestacionIE: data.contestacionIE || false,
         radicadoContestacion: data.radicadoContestacion || "",
         estudiante: data.estudiante || "",
         institucionContraQuienSeDirige: data.institucionContraQuienSeDirige || "",
-        situacion: data.situacion || "",
-        sacRespuesta: data.sacRespuesta || "",
+        situacion: data.situacion,
+        sacRespuesta: data.sacRespuesta,
       })
     } else {
       setNotFound(true)
@@ -155,7 +180,7 @@ export default function EditarCasoSACPage() {
         <Card>
           <CardHeader>
             <CardTitle>Información Básica</CardTitle>
-            <CardDescription>Datos principales del caso</CardDescription>
+            <CardDescription>Datos principales del caso en el SAC</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -163,6 +188,7 @@ export default function EditarCasoSACPage() {
                 <Label htmlFor="radicado">Radicado *</Label>
                 <Input
                   id="radicado"
+                  placeholder="Ej: CUC2024ER002434"
                   {...register("radicado")}
                   className={errors.radicado ? "border-red-500" : ""}
                 />
@@ -175,8 +201,10 @@ export default function EditarCasoSACPage() {
                 <Label htmlFor="ciudadano">Ciudadano *</Label>
                 <Input
                   id="ciudadano"
+                  placeholder="Nombre en mayúsculas"
                   {...register("ciudadano")}
                   className={errors.ciudadano ? "border-red-500" : ""}
+                  style={{ textTransform: "uppercase" }}
                 />
                 {errors.ciudadano && (
                   <p className="text-sm text-red-500">{errors.ciudadano.message}</p>
@@ -194,6 +222,16 @@ export default function EditarCasoSACPage() {
                 {errors.fechaRadicacion && (
                   <p className="text-sm text-red-500">{errors.fechaRadicacion.message}</p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="radicadoRespuesta">Radicado Respuesta</Label>
+                <Input
+                  id="radicadoRespuesta"
+                  placeholder="Ej: CUC2024EE002434"
+                  {...register("radicadoRespuesta")}
+                />
+                <p className="text-xs text-slate-500">Código del documento final de respuesta</p>
               </div>
 
               <div className="space-y-2">
@@ -219,6 +257,228 @@ export default function EditarCasoSACPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="estudiante">Estudiante</Label>
+                <Input
+                  id="estudiante"
+                  placeholder="Nombre del estudiante involucrado"
+                  {...register("estudiante")}
+                  style={{ textTransform: "uppercase" }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Traslado a I.E. */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Traslado a Institución Educativa</CardTitle>
+            <CardDescription>Información del traslado del caso a una I.E.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex items-center space-x-3">
+                <Switch
+                  id="trasladoIE"
+                  checked={trasladoIE}
+                  onCheckedChange={(checked) => {
+                    setTrasladoIE(checked)
+                    setValue("trasladoIE", checked)
+                  }}
+                />
+                <Label htmlFor="trasladoIE">¿Se trasladó a una I.E.?</Label>
+              </div>
+
+              {trasladoIE && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="institucionContraQuienSeDirige">Institución Contra Quien se Dirige</Label>
+                    <Select
+                      defaultValue={caso.institucionContraQuienSeDirige || ""}
+                      onValueChange={(value) => setValue("institucionContraQuienSeDirige", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona la I.E." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {instituciones.map((ie) => (
+                          <SelectItem key={ie} value={ie}>
+                            {ie}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="radicadoExterna">Radicado Externa</Label>
+                    <Input
+                      id="radicadoExterna"
+                      placeholder="Ej: CUC2024EE002434"
+                      {...register("radicadoExterna")}
+                    />
+                    <p className="text-xs text-slate-500">Código del oficio enviado a la I.E.</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Respondido */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Respuesta al Ciudadano</CardTitle>
+            <CardDescription>Estado de la respuesta formal al ciudadano</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex items-center space-x-3">
+                <Switch
+                  id="respondido"
+                  checked={respondido}
+                  onCheckedChange={(checked) => {
+                    setRespondido(checked)
+                    setValue("respondido", checked)
+                  }}
+                />
+                <Label htmlFor="respondido">¿El ciudadano ya recibió respuesta?</Label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Prórroga */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Información de Prórroga</CardTitle>
+            <CardDescription>Ampliación de términos legales de respuesta</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex items-center space-x-3">
+                <Switch
+                  id="prorroga"
+                  checked={prorroga}
+                  onCheckedChange={(checked) => {
+                    setProrroga(checked)
+                    setValue("prorroga", checked)
+                  }}
+                />
+                <Label htmlFor="prorroga">¿Se requirió prórroga?</Label>
+              </div>
+
+              {prorroga && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="fechaNuevaProrroga">Fecha Nueva Prórroga</Label>
+                    <Input
+                      id="fechaNuevaProrroga"
+                      type="date"
+                      {...register("fechaNuevaProrroga")}
+                    />
+                    <p className="text-xs text-slate-500">Nueva fecha límite de vencimiento</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="radicadoProrroga">Radicado Prórroga</Label>
+                    <Input
+                      id="radicadoProrroga"
+                      placeholder="Ej: CUC2024EO002434"
+                      {...register("radicadoProrroga")}
+                    />
+                    <p className="text-xs text-slate-500">Código donde se notifica la ampliación</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contestación I.E. */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Contestación de la I.E.</CardTitle>
+            <CardDescription>Respuesta de la Institución Educativa al traslado</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex items-center space-x-3">
+                <Switch
+                  id="contestacionIE"
+                  checked={contestacionIE}
+                  onCheckedChange={(checked) => {
+                    setContestacionIE(checked)
+                    setValue("contestacionIE", checked)
+                  }}
+                />
+                <Label htmlFor="contestacionIE">¿La I.E. envió su respuesta?</Label>
+              </div>
+
+              {contestacionIE && (
+                <div className="space-y-2">
+                  <Label htmlFor="radicadoContestacion">Radicado Contestación</Label>
+                  <Input
+                    id="radicadoContestacion"
+                    placeholder="Ej: CUC2024ER002434"
+                    {...register("radicadoContestacion")}
+                  />
+                  <p className="text-xs text-slate-500">Código del radicado de entrada de la I.E.</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Situación y Estado */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Situación y Estado</CardTitle>
+            <CardDescription>Clasificación y estado administrativo del caso</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="situacion">Situación</Label>
+                <Select
+                  defaultValue={caso.situacion || ""}
+                  onValueChange={(value) => setValue("situacion", value as CasoSACExtendidoFormData["situacion"])}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona la clasificación" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {situaciones.map((sit) => (
+                      <SelectItem key={sit} value={sit}>
+                        {sit}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">Categorización de la gravedad del caso</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sacRespuesta">SAC Respuesta (Comunicación Externa)</Label>
+                <Select
+                  defaultValue={caso.sacRespuesta || ""}
+                  onValueChange={(value) => setValue("sacRespuesta", value as CasoSACExtendidoFormData["sacRespuesta"])}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sacRespuestas.map((resp) => (
+                      <SelectItem key={resp} value={resp}>
+                        {resp}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">Estado de la gestión de respuesta dentro del SAC</p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="estado">Estado *</Label>
                 <Select
                   defaultValue={caso.estado}
@@ -235,163 +495,10 @@ export default function EditarCasoSACPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-slate-500">Situación administrativa actual del proceso</p>
                 {errors.estado && (
                   <p className="text-sm text-red-500">{errors.estado.message}</p>
                 )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="estudiante">Estudiante</Label>
-                <Input
-                  id="estudiante"
-                  placeholder="Nombre del estudiante involucrado"
-                  {...register("estudiante")}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Traslado y Radicados */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Traslado y Radicados</CardTitle>
-            <CardDescription>Información de traslado y documentos asociados</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="trasladoIE">Traslado a I.E.</Label>
-                <Input
-                  id="trasladoIE"
-                  placeholder="Institución educativa de traslado"
-                  {...register("trasladoIE")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="radicadoExterna">Radicado Externa</Label>
-                <Input
-                  id="radicadoExterna"
-                  placeholder="Número de radicado externo"
-                  {...register("radicadoExterna")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="respondido">Respondido</Label>
-                <Input
-                  id="respondido"
-                  placeholder="Estado de respuesta"
-                  {...register("respondido")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="institucionContraQuienSeDirige">Institución Contra Quien se Dirige</Label>
-                <Input
-                  id="institucionContraQuienSeDirige"
-                  placeholder="Nombre de la institución"
-                  {...register("institucionContraQuienSeDirige")}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Prórroga */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Información de Prórroga</CardTitle>
-            <CardDescription>Datos relacionados con prórrogas del caso</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="prorroga">Prórroga</Label>
-                <Input
-                  id="prorroga"
-                  placeholder="Descripción de prórroga"
-                  {...register("prorroga")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fechaNuevaProrroga">Fecha Nueva Prórroga</Label>
-                <Input
-                  id="fechaNuevaProrroga"
-                  type="date"
-                  {...register("fechaNuevaProrroga")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="radicadoProrroga">Radicado Prórroga</Label>
-                <Input
-                  id="radicadoProrroga"
-                  placeholder="Número de radicado de prórroga"
-                  {...register("radicadoProrroga")}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Contestación */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Contestación I.E.</CardTitle>
-            <CardDescription>Información de contestación de la institución educativa</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="contestacionIE">Contestación I.E.</Label>
-                <Input
-                  id="contestacionIE"
-                  placeholder="Descripción de la contestación"
-                  {...register("contestacionIE")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="radicadoContestacion">Radicado Contestación</Label>
-                <Input
-                  id="radicadoContestacion"
-                  placeholder="Número de radicado de contestación"
-                  {...register("radicadoContestacion")}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Situación y Respuesta */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Situación y Respuesta</CardTitle>
-            <CardDescription>Descripción detallada del caso y respuesta del SAC</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="situacion">Situación</Label>
-                <Textarea
-                  id="situacion"
-                  placeholder="Descripción detallada de la situación..."
-                  rows={4}
-                  {...register("situacion")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="sacRespuesta">SAC Respuesta</Label>
-                <Textarea
-                  id="sacRespuesta"
-                  placeholder="Respuesta oficial del SAC..."
-                  rows={4}
-                  {...register("sacRespuesta")}
-                />
               </div>
             </div>
           </CardContent>
