@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 
 import { casoSIUCESchema, type CasoSIUCEFormData } from "@/lib/validations"
 import { getCaseSIUCE, updateCaseSIUCE } from "@/lib/storage"
@@ -168,6 +169,8 @@ export default function EditarCasoSIUCEPage() {
   const [showOtroEvento, setShowOtroEvento] = useState(false)
   const [avanceIE, setAvanceIE] = useState(0)
   const [avanceSEM, setAvanceSEM] = useState(0)
+  const [avanceGeneral, setAvanceGeneral] = useState(0)
+  const [estadoCalculado, setEstadoCalculado] = useState<"PENDIENTE" | "EN PROGRESO" | "TERMINADO">("PENDIENTE")
 
   const {
     register,
@@ -192,6 +195,8 @@ export default function EditarCasoSIUCEPage() {
       setCaso(data)
       setAvanceIE(data.avanceIE)
       setAvanceSEM(data.avanceSEM)
+      setAvanceGeneral(data.avanceGeneral)
+      setEstadoCalculado(data.estado as "PENDIENTE" | "EN PROGRESO" | "TERMINADO")
       setShowOtroEvento(data.eventoGenerador === "Otro")
       
       reset({
@@ -246,18 +251,15 @@ export default function EditarCasoSIUCEPage() {
     setShowOtroEvento(eventoGenerador === "Otro")
   }, [eventoGenerador])
 
-  // Calcular avance general
+  // Calcular avance general y estado automáticamente
   useEffect(() => {
-    const avanceGeneral = Math.round((avanceIE + avanceSEM) / 2)
-    setValue("avanceGeneral", avanceGeneral)
+    const promedio = Math.round((avanceIE + avanceSEM) / 2)
+    setAvanceGeneral(promedio)
+    setValue("avanceGeneral", promedio)
     
-    if (avanceGeneral === 100) {
-      setValue("estado", "TERMINADO")
-    } else if (avanceGeneral > 0) {
-      setValue("estado", "EN PROGRESO")
-    } else {
-      setValue("estado", "PENDIENTE")
-    }
+    const estado = calcularEstado(promedio)
+    setEstadoCalculado(estado)
+    setValue("estado", estado)
   }, [avanceIE, avanceSEM, setValue])
 
   const onSubmit = async (data: CasoSIUCEFormData) => {
@@ -636,48 +638,115 @@ export default function EditarCasoSIUCEPage() {
           </CardContent>
         </Card>
 
-        {/* Avances */}
+        {/* Acciones y Avances */}
         <Card>
           <CardHeader>
-            <CardTitle>Avances</CardTitle>
-            <CardDescription>Avance General: {watch("avanceGeneral") || 0}% (promedio de Avance I.E. y Avance S.E.M.)</CardDescription>
+            <CardTitle>Acciones y Avances</CardTitle>
+            <CardDescription>
+              Los porcentajes de avance se calculan automáticamente según las acciones seleccionadas
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2">
+              {/* Acciones I.E. */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="avanceIE">Avance I.E.</Label>
-                  <span className="text-sm font-medium">{avanceIE}%</span>
+                <div className="space-y-2">
+                  <Label htmlFor="accionesIE">Acciones de I.E.</Label>
+                  <Select 
+                    defaultValue={caso.accionesIE || undefined}
+                    onValueChange={(value) => {
+                      const accion = accionesIE.find(a => a.label === value)
+                      if (accion) {
+                        setValue("accionesIE", value)
+                        setAvanceIE(accion.value)
+                        setValue("avanceIE", accion.value)
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona la acción" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accionesIE.map((accion) => (
+                        <SelectItem key={accion.label} value={accion.label}>
+                          {accion.label} ({accion.value}%)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Slider
-                  id="avanceIE"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={[avanceIE]}
-                  onValueChange={(value) => {
-                    setAvanceIE(value[0])
-                    setValue("avanceIE", value[0])
-                  }}
-                />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Avance I.E.</span>
+                    <span className="font-medium">{avanceIE}%</span>
+                  </div>
+                  <Progress value={Math.max(avanceIE, 0)} className="h-2" />
+                </div>
               </div>
 
+              {/* Acciones S.E.M. */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="avanceSEM">Avance S.E.M.</Label>
-                  <span className="text-sm font-medium">{avanceSEM}%</span>
+                <div className="space-y-2">
+                  <Label htmlFor="accionesSEM">Acciones de S.E.M.</Label>
+                  <Select 
+                    defaultValue={caso.accionesSEM || undefined}
+                    onValueChange={(value) => {
+                      const accion = accionesSEM.find(a => a.label === value)
+                      if (accion) {
+                        setValue("accionesSEM", value)
+                        setAvanceSEM(accion.value)
+                        setValue("avanceSEM", accion.value)
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona la acción" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accionesSEM.map((accion) => (
+                        <SelectItem key={accion.label} value={accion.label}>
+                          {accion.label} ({accion.value}%)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Slider
-                  id="avanceSEM"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={[avanceSEM]}
-                  onValueChange={(value) => {
-                    setAvanceSEM(value[0])
-                    setValue("avanceSEM", value[0])
-                  }}
-                />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Avance S.E.M.</span>
+                    <span className="font-medium">{avanceSEM}%</span>
+                  </div>
+                  <Progress value={avanceSEM} className="h-2" />
+                </div>
+              </div>
+
+              {/* Avance General y Estado */}
+              <div className="sm:col-span-2 p-4 rounded-lg bg-slate-50 border">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Avance General (Automático)</Label>
+                      <span className="text-lg font-bold">{avanceGeneral}%</span>
+                    </div>
+                    <Progress value={avanceGeneral} className="h-3" />
+                    <p className="text-xs text-slate-500">Promedio de Avance I.E. y Avance S.E.M.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Estado (Automático)</Label>
+                    <div className="flex items-center h-10">
+                      <Badge variant="outline" className={
+                        estadoCalculado === "TERMINADO" ? "bg-green-100 text-green-800 border-green-200" :
+                        estadoCalculado === "EN PROGRESO" ? "bg-blue-100 text-blue-800 border-blue-200" :
+                        "bg-yellow-100 text-yellow-800 border-yellow-200"
+                      }>
+                        {estadoCalculado}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      0% = PENDIENTE | 1-99% = EN PROGRESO | 100% = TERMINADO
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="sm:col-span-2 space-y-2">
