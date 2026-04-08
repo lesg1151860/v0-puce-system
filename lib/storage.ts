@@ -56,6 +56,12 @@ export function getCaseSAC(id: string): CasoSAC | undefined {
   return cases.find((c) => c.id === id)
 }
 
+// Validar si un radicado SAC ya existe (excluye el caso con excludeId si se proporciona)
+export function isRadicadoSACDuplicado(radicado: string, excludeId?: string): boolean {
+  const cases = getCasesSAC()
+  return cases.some((c) => c.radicado === radicado && c.id !== excludeId)
+}
+
 export function createCaseSAC(data: Omit<CasoSAC, "id" | "createdAt" | "updatedAt">): CasoSAC {
   const cases = getCasesSAC()
   const newCase: CasoSAC = {
