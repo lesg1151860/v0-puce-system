@@ -225,14 +225,14 @@ export default function NuevoCasoSIUCEPage() {
     setShowOtroEvento(eventoGenerador === "Otro")
   }, [eventoGenerador])
 
-  // Calcular avance general (suma de avances, máximo 100)
+  // Calcular avance general (promedio de avances I.E. y S.E.M.)
   useEffect(() => {
-const promedio = Math.round((avanceIE + avanceSEM) / 2)
-  setAvanceGeneral(promedio)
-  setValue("avanceGeneral", promedio)
+    const promedio = Math.round((avanceIE + avanceSEM) / 2)
+    setAvanceGeneral(promedio)
+    setValue("avanceGeneral", promedio)
     
     // Calcular estado automáticamente
-    const estado = calcularEstado(total)
+    const estado = calcularEstado(promedio)
     setEstadoCalculado(estado)
     setValue("estado", estado)
   }, [avanceIE, avanceSEM, setValue])
