@@ -35,6 +35,13 @@ const navigation = [
     icon: AlertTriangle,
     description: "Sistema de Información Unificado de Convivencia Escolar",
   },
+
+  {
+    name: "Reportes",
+    href: "/reportes",
+    icon: AlertTriangle,
+    description: "Gestión de Reportes",
+  },
 ]
 
 export function Sidebar() {
