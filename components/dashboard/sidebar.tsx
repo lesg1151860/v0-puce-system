@@ -32,7 +32,7 @@ const navigation = [
   {
     name: "SIUCE",
     href: "/siuce",
-    icon: AlertTriangle,
+    icon: FileText,
     description: "Sistema de Información Unificado de Convivencia Escolar",
   },
 
