@@ -29,25 +29,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
 
+import { Badge } from "@/components/ui/badge"
 import { getCasesSAC, deleteCaseSAC } from "@/lib/storage"
 import type { CasoSAC, EstadoSAC } from "@/lib/types"
 
 const estadoBadgeStyles: Record<EstadoSAC, string> = {
   "EN SEGUIMIENTO": "bg-blue-100 text-blue-800 border-blue-200",
   "TERMINADO": "bg-green-100 text-green-800 border-green-200",
+}
+
+const situacionBadgeStyles: Record<string, string> = {
+  "Tipo 1": "bg-slate-100 text-slate-800 border-slate-200",
+  "Tipo 2": "bg-orange-100 text-orange-800 border-orange-200",
+  "Tipo 3": "bg-red-100 text-red-800 border-red-200",
 }
 
 export default function SACListPage() {
@@ -199,7 +194,11 @@ export default function SACListPage() {
                       <TableCell>
                         {new Date(caso.fechaRadicacion).toLocaleDateString("es-CO")}
                       </TableCell>
-                      <TableCell>{caso.situacion}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={situacionBadgeStyles[caso.situacion]}>
+                          {caso.situacion}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{caso.respondido}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={estadoBadgeStyles[caso.estado]}>
