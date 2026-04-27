@@ -182,8 +182,10 @@ export default function SACListPage() {
                   <TableRow>
                     <TableHead>Radicado</TableHead>
                     <TableHead>Ciudadano</TableHead>
+                    <TableHead>Estudiante Involucrado</TableHead>
                     <TableHead>Fecha Radicación</TableHead>
-                    <TableHead>Rol</TableHead>
+                    <TableHead>Clasificación</TableHead>
+                    <TableHead>Reespuesta al Ciudadano</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
@@ -193,10 +195,12 @@ export default function SACListPage() {
                     <TableRow key={caso.id}>
                       <TableCell className="font-medium">{caso.radicado}</TableCell>
                       <TableCell>{caso.ciudadano}</TableCell>
+                      <TableCell>{caso.estudiante}</TableCell>
                       <TableCell>
                         {new Date(caso.fechaRadicacion).toLocaleDateString("es-CO")}
                       </TableCell>
-                      <TableCell>{caso.rol}</TableCell>
+                      <TableCell>{caso.situacion}</TableCell>
+                      <TableCell>{caso.respondido}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={estadoBadgeStyles[caso.estado]}>
                           {caso.estado}
