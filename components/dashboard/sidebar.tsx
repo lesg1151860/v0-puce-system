@@ -69,8 +69,8 @@ export function Sidebar() {
           <ShieldCheck className="h-5 w-5" />
         </div>
         <div>
-          <span className="text-lg font-bold text-slate-900">SICE</span>
-          <p className="text-xs text-slate-500 leading-tight">Convivencia Escolar</p>
+          <span className="text-lg font-bold text-slate-900">PUCE</span>
+          <p className="text-xs text-slate-500 leading-tight">Plataforma Unificada de Seguimiento Educativo.</p>
         </div>
       </div>
 
