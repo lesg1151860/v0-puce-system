@@ -20,8 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Textarea } from "@/components/ui/textarea"
 
 import { casoSACExtendidoSchema, type CasoSACExtendidoFormData } from "@/lib/validations"
+import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
 import { getCaseSAC, updateCaseSAC, isRadicadoSACDuplicado } from "@/lib/storage"
 import type { CasoSAC } from "@/lib/types"
 
@@ -69,16 +71,26 @@ export default function EditarCasoSACPage() {
   const [prorroga, setProrroga] = useState(false)
   const [contestacionIE, setContestacionIE] = useState(false)
   const [respondido, setRespondido] = useState(false)
+  const [radicadoRespuesta, setRadicadoRespuesta] = useState("")
 
   const {
     register,
     handleSubmit,
     setValue,
     reset,
+    watch,
     formState: { errors },
   } = useForm<CasoSACExtendidoFormData>({
     resolver: zodResolver(casoSACExtendidoSchema),
   })
+
+  // Automatizar respuesta al ciudadano si hay prorroga o radicado respuesta
+  useEffect(() => {
+    if (prorroga || radicadoRespuesta) {
+      setRespondido(true)
+      setValue("respondido", true)
+    }
+  }, [prorroga, radicadoRespuesta, setValue])
 
   useEffect(() => {
     const data = getCaseSAC(id)
@@ -89,6 +101,7 @@ export default function EditarCasoSACPage() {
       setProrroga(data.prorroga || false)
       setContestacionIE(data.contestacionIE || false)
       setRespondido(data.respondido || false)
+      setRadicadoRespuesta(data.radicadoRespuesta || "")
       
       // Reset form with existing data
       reset({
@@ -110,6 +123,7 @@ export default function EditarCasoSACPage() {
         institucionContraQuienSeDirige: data.institucionContraQuienSeDirige || "",
         situacion: data.situacion,
         sacRespuesta: data.sacRespuesta,
+        descripcion: data.descripcion || "",
       })
     } else {
       setNotFound(true)
@@ -121,14 +135,29 @@ export default function EditarCasoSACPage() {
   setIsLoading(true)
   
   try {
-    // Validar que el radicado sea único (excluyendo el caso actual)
-    if (isRadicadoSACDuplicado(data.radicado, id)) {
-      setError("El radicado ya existe en otro caso. Por favor ingrese un radicado único.")
+    // Validar caracteres especiales en campos de texto
+    if (hasSpecialChars(data.ciudadano) || hasSpecialChars(data.estudiante || "")) {
+      setError(SPECIAL_CHARS_ERROR)
       setIsLoading(false)
       return
     }
 
-    updateCaseSAC(id, data)
+    // Validar que el radicado sea unico (excluyendo el caso actual)
+    if (isRadicadoSACDuplicado(data.radicado, id)) {
+      setError("El radicado ya existe en otro caso. Por favor ingrese un radicado unico.")
+      setIsLoading(false)
+      return
+    }
+
+    // Normalizar campos de texto a mayusculas sin tildes
+    const normalizedData = {
+      ...data,
+      ciudadano: sanitizeText(data.ciudadano),
+      estudiante: data.estudiante ? sanitizeText(data.estudiante) : undefined,
+      descripcion: data.descripcion ? sanitizeText(data.descripcion) : undefined,
+    }
+
+    updateCaseSAC(id, normalizedData)
     router.push("/sac")
   } catch (err) {
     setError("Error al actualizar el caso. Intente nuevamente.")
@@ -237,8 +266,13 @@ export default function EditarCasoSACPage() {
                   id="radicadoRespuesta"
                   placeholder="Ej: CUC2024EE002434"
                   {...register("radicadoRespuesta")}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setRadicadoRespuesta(value)
+                    setValue("radicadoRespuesta", value)
+                  }}
                 />
-                <p className="text-xs text-slate-500">Código del documento final de respuesta</p>
+                <p className="text-xs text-slate-500">Codigo del documento final de respuesta (marca automaticamente como respondido)</p>
               </div>
 
               <div className="space-y-2">
@@ -437,11 +471,31 @@ export default function EditarCasoSACPage() {
           </CardContent>
         </Card>
 
+        {/* Descripción del Caso */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Descripcion del Caso</CardTitle>
+            <CardDescription>Detalle y contexto del caso reportado</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="descripcion">Descripcion</Label>
+              <Textarea
+                id="descripcion"
+                placeholder="Describa el caso detalladamente..."
+                {...register("descripcion")}
+                rows={4}
+              />
+              <p className="text-xs text-slate-500">Informacion adicional sobre el caso (sin tildes ni caracteres especiales)</p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Situación y Estado */}
         <Card>
           <CardHeader>
-            <CardTitle>Situación y Estado</CardTitle>
-            <CardDescription>Clasificación y estado administrativo del caso</CardDescription>
+            <CardTitle>Situacion y Estado</CardTitle>
+            <CardDescription>Clasificacion y estado administrativo del caso</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

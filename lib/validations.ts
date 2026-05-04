@@ -60,6 +60,7 @@ export const casoSACExtendidoSchema = casoSACBasicoSchema.extend({
   institucionContraQuienSeDirige: z.string().optional(),
   situacion: z.enum(situacionSACOptions).optional(),
   sacRespuesta: z.enum(sacRespuestaOptions).optional(),
+  descripcion: z.string().optional(),
 })
 
 // Tipos de identificación

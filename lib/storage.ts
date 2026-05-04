@@ -209,6 +209,66 @@ export function getDashboardStats(): DashboardStats {
   }
 }
 
+// Obtener estadísticas de acciones I.E.
+export function getAccionesIEStats(): { accion: string; cantidad: number }[] {
+  const casesSIUCE = getCasesSIUCE()
+  const accionesCount: Record<string, number> = {}
+  
+  casesSIUCE.forEach((c) => {
+    if (c.accionesIE) {
+      accionesCount[c.accionesIE] = (accionesCount[c.accionesIE] || 0) + 1
+    }
+  })
+  
+  return Object.entries(accionesCount)
+    .map(([accion, cantidad]) => ({ accion, cantidad }))
+    .sort((a, b) => b.cantidad - a.cantidad)
+}
+
+// Obtener estadísticas de acciones S.E.M.
+export function getAccionesSEMStats(): { accion: string; cantidad: number }[] {
+  const casesSIUCE = getCasesSIUCE()
+  const accionesCount: Record<string, number> = {}
+  
+  casesSIUCE.forEach((c) => {
+    if (c.accionesSEM) {
+      accionesCount[c.accionesSEM] = (accionesCount[c.accionesSEM] || 0) + 1
+    }
+  })
+  
+  return Object.entries(accionesCount)
+    .map(([accion, cantidad]) => ({ accion, cantidad }))
+    .sort((a, b) => b.cantidad - a.cantidad)
+}
+
+// Obtener casos SAC sin respuesta al ciudadano (para notificaciones)
+export function getCasosSACSinRespuesta(): CasoSAC[] {
+  const cases = getCasesSAC()
+  return cases.filter((c) => !c.respondido && c.estado === "EN SEGUIMIENTO")
+}
+
+// Obtener instituciones educativas únicas
+export function getInstitucionesEducativas(): string[] {
+  const casesSAC = getCasesSAC()
+  const casesSIUCE = getCasesSIUCE()
+  
+  const instituciones = new Set<string>()
+  
+  casesSAC.forEach((c) => {
+    if (c.institucionContraQuienSeDirige) {
+      instituciones.add(c.institucionContraQuienSeDirige)
+    }
+  })
+  
+  casesSIUCE.forEach((c) => {
+    if (c.ie) {
+      instituciones.add(c.ie)
+    }
+  })
+  
+  return Array.from(instituciones).sort()
+}
+
 // ============== DATOS DE DEMOSTRACIÓN ==============
 
 export function seedDemoData(): void {

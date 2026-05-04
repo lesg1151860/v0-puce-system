@@ -104,6 +104,7 @@ export interface CasoSAC {
   institucionContraQuienSeDirige?: string // Nombre oficial de la I.E.
   situacion?: SituacionSAC // Tipo 1, 2 o 3 según gravedad
   sacRespuesta?: SACRespuestaEstado // ENVIADA, NO, SÍ
+  descripcion?: string // Descripción del caso
   // Metadatos
   createdAt: string
   updatedAt: string
