@@ -21,7 +21,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 import { casoSACBasicoSchema, type CasoSACBasicoFormData } from "@/lib/validations"
-import { createCaseSAC } from "@/lib/storage"
+import { createCaseSAC, isRadicadoSACDuplicado } from "@/lib/storage"
 
 const roles = [
   "Estudiante",
@@ -61,6 +61,13 @@ export default function NuevoCasoSACPage() {
     setIsLoading(true)
 
     try {
+      // Validar que el radicado sea único
+      if (isRadicadoSACDuplicado(data.radicado)) {
+        setError("El radicado ya existe en el sistema. Por favor ingrese un radicado único.")
+        setIsLoading(false)
+        return
+      }
+
       createCaseSAC(data)
       router.push("/sac")
     } catch (err) {

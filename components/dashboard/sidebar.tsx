@@ -6,7 +6,7 @@ import {
   ShieldCheck,
   LayoutDashboard,
   FileText,
-  AlertTriangle,
+  FileSpreadsheet,
   LogOut,
   Menu,
   X,
@@ -39,8 +39,8 @@ const navigation = [
   {
     name: "Reportes",
     href: "/reportes",
-    icon: AlertTriangle,
-    description: "Gestión de Reportes",
+    icon: FileSpreadsheet,
+    description: "Generación de Reportes Excel",
   },
 ]
 

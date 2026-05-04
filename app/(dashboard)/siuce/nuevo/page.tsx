@@ -25,7 +25,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 
 import { casoSIUCESchema, type CasoSIUCEFormData } from "@/lib/validations"
-import { createCaseSIUCE } from "@/lib/storage"
+import { createCaseSIUCE, isRadicadoSIUCEDuplicado, isIdentificacionSIUCEDuplicada } from "@/lib/storage"
 
 // Opciones de selección
 const instituciones = [
@@ -237,17 +237,31 @@ export default function NuevoCasoSIUCEPage() {
     setValue("estado", estado)
   }, [avanceIE, avanceSEM, setValue])
 
-  const onSubmit = async (data: CasoSIUCEFormData) => {
-    setError("")
-    setIsLoading(true)
-
-    try {
-      createCaseSIUCE(data)
-      router.push("/siuce")
-    } catch (err) {
-      setError("Error al guardar el caso. Intente nuevamente.")
-    } finally {
+ const onSubmit = async (data: CasoSIUCEFormData) => {
+  setError("")
+  setIsLoading(true)
+  
+  try {
+    // Validar que el radicado sea único
+    if (isRadicadoSIUCEDuplicado(data.radicado)) {
+      setError("El radicado ya existe en el sistema. Por favor ingrese un radicado único.")
       setIsLoading(false)
+      return
+    }
+
+    // Validar que el número de identificación sea único
+    if (isIdentificacionSIUCEDuplicada(data.numeroIdentificacion)) {
+      setError("El número de identificación ya existe en el sistema. Por favor verifique los datos.")
+      setIsLoading(false)
+      return
+    }
+
+    createCaseSIUCE(data)
+    router.push("/siuce")
+  } catch (err) {
+    setError("Error al guardar el caso. Intente nuevamente.")
+  } finally {
+    setIsLoading(false)
     }
   }
 

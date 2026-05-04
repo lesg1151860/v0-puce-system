@@ -22,7 +22,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 import { casoSACExtendidoSchema, type CasoSACExtendidoFormData } from "@/lib/validations"
-import { getCaseSAC, updateCaseSAC } from "@/lib/storage"
+import { getCaseSAC, updateCaseSAC, isRadicadoSACDuplicado } from "@/lib/storage"
 import type { CasoSAC } from "@/lib/types"
 
 const roles = [
@@ -116,17 +116,24 @@ export default function EditarCasoSACPage() {
     }
   }, [id, reset])
 
-  const onSubmit = async (data: CasoSACExtendidoFormData) => {
-    setError("")
-    setIsLoading(true)
-
-    try {
-      updateCaseSAC(id, data)
-      router.push("/sac")
-    } catch (err) {
-      setError("Error al actualizar el caso. Intente nuevamente.")
-    } finally {
+ const onSubmit = async (data: CasoSACExtendidoFormData) => {
+  setError("")
+  setIsLoading(true)
+  
+  try {
+    // Validar que el radicado sea único (excluyendo el caso actual)
+    if (isRadicadoSACDuplicado(data.radicado, id)) {
+      setError("El radicado ya existe en otro caso. Por favor ingrese un radicado único.")
       setIsLoading(false)
+      return
+    }
+
+    updateCaseSAC(id, data)
+    router.push("/sac")
+  } catch (err) {
+    setError("Error al actualizar el caso. Intente nuevamente.")
+  } finally {
+    setIsLoading(false)
     }
   }
 

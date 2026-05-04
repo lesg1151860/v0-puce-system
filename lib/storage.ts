@@ -62,6 +62,42 @@ export function isRadicadoSACDuplicado(radicado: string, excludeId?: string): bo
   return cases.some((c) => c.radicado === radicado && c.id !== excludeId)
 }
 
+// Validar si un radicado SIUCE ya existe (excluye el caso con excludeId si se proporciona)
+export function isRadicadoSIUCEDuplicado(radicado: string, excludeId?: string): boolean {
+  const cases = getCasesSIUCE()
+  return cases.some((c) => c.radicado === radicado && c.id !== excludeId)
+}
+
+// Validar si un número de identificación SIUCE ya existe (excluye el caso con excludeId si se proporciona)
+export function isIdentificacionSIUCEDuplicada(numeroIdentificacion: string, excludeId?: string): boolean {
+  const cases = getCasesSIUCE()
+  return cases.some((c) => c.numeroIdentificacion === numeroIdentificacion && c.id !== excludeId)
+}
+
+// Obtener casos SAC filtrados por fecha
+export function getCasesSACByDateRange(year: number, month?: number): CasoSAC[] {
+  const cases = getCasesSAC()
+  return cases.filter((c) => {
+    const fecha = new Date(c.fechaRadicacion)
+    if (month !== undefined) {
+      return fecha.getFullYear() === year && fecha.getMonth() === month
+    }
+    return fecha.getFullYear() === year
+  })
+}
+
+// Obtener casos SIUCE filtrados por fecha
+export function getCasesSIUCEByDateRange(year: number, month?: number): CasoSIUCE[] {
+  const cases = getCasesSIUCE()
+  return cases.filter((c) => {
+    const fecha = new Date(c.fechaRegistro)
+    if (month !== undefined) {
+      return fecha.getFullYear() === year && fecha.getMonth() === month
+    }
+    return fecha.getFullYear() === year
+  })
+}
+
 export function createCaseSAC(data: Omit<CasoSAC, "id" | "createdAt" | "updatedAt">): CasoSAC {
   const cases = getCasesSAC()
   const newCase: CasoSAC = {
