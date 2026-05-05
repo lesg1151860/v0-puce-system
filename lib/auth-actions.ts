@@ -197,3 +197,76 @@ export async function isUsernameUnique(username: string, excludeId?: string): Pr
 
   return !data || data.length === 0
 }
+
+// Vincular cuenta de Google con usuario pre-registrado
+export async function linkGoogleAccountToSystemUser(authUserId: string, email: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  
+  // Buscar usuario pre-registrado por correo
+  const { data: systemUser, error: findError } = await supabase
+    .from("system_users")
+    .select("*")
+    .eq("correo_electronico", email.toLowerCase())
+    .single()
+
+  if (findError || !systemUser) {
+    return { 
+      success: false, 
+      error: "No tiene una cuenta autorizada en el sistema. Contacte al administrador." 
+    }
+  }
+
+  // Verificar si la cuenta esta activa
+  if (!systemUser.activo) {
+    return { 
+      success: false, 
+      error: "Su cuenta ha sido desactivada. Contacte al administrador." 
+    }
+  }
+
+  // Verificar si ya esta vinculada a otro auth_user_id
+  if (systemUser.auth_user_id && systemUser.auth_user_id !== authUserId) {
+    return { 
+      success: false, 
+      error: "Esta cuenta ya esta vinculada a otro usuario." 
+    }
+  }
+
+  // Vincular auth_user_id si no esta vinculado
+  if (!systemUser.auth_user_id) {
+    const { error: updateError } = await supabase
+      .from("system_users")
+      .update({ auth_user_id: authUserId })
+      .eq("id", systemUser.id)
+
+    if (updateError) {
+      return { 
+        success: false, 
+        error: "Error al vincular la cuenta. Intente nuevamente." 
+      }
+    }
+  }
+
+  return { success: true }
+}
+
+// Verificar si el usuario tiene acceso al sistema
+export async function verifySystemAccess(email: string): Promise<{ hasAccess: boolean; isActive: boolean; rol?: string }> {
+  const supabase = await createClient()
+  
+  const { data: systemUser } = await supabase
+    .from("system_users")
+    .select("activo, rol")
+    .eq("correo_electronico", email.toLowerCase())
+    .single()
+
+  if (!systemUser) {
+    return { hasAccess: false, isActive: false }
+  }
+
+  return { 
+    hasAccess: true, 
+    isActive: systemUser.activo,
+    rol: systemUser.rol
+  }
+}
