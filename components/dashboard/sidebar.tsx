@@ -24,32 +24,43 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
   description?: string
   adminOnly?: boolean
+  liderOnly?: boolean
 }
 
-const navigation: NavItem[] = [
+// Navegacion para LIDER (Dashboard estadistico, SAC, SIUCE, Reportes)
+const liderNavigation: NavItem[] = [
   {
     name: "Dashboard",
     href: "/",
     icon: LayoutDashboard,
+    description: "Panel de Estadisticas",
+    liderOnly: true,
   },
   {
     name: "SAC",
     href: "/sac",
     icon: FileText,
     description: "Sistema de Atencion al Ciudadano",
+    liderOnly: true,
   },
   {
     name: "SIUCE",
     href: "/siuce",
     icon: FileText,
     description: "Sistema de Informacion Unificado de Convivencia Escolar",
+    liderOnly: true,
   },
   {
     name: "Reportes",
     href: "/reportes",
     icon: FileSpreadsheet,
     description: "Generacion de Reportes Excel",
+    liderOnly: true,
   },
+]
+
+// Navegacion para ADMINISTRADOR (solo Usuarios)
+const adminNavigation: NavItem[] = [
   {
     name: "Usuarios",
     href: "/usuarios",
@@ -105,13 +116,8 @@ export function Sidebar() {
     return pathname.startsWith(href)
   }
 
-  // Filtrar items de navegacion segun rol
-  const filteredNavigation = navigation.filter(item => {
-    if (item.adminOnly && !isAdmin) {
-      return false
-    }
-    return true
-  })
+  // Seleccionar navegacion segun rol
+  const filteredNavigation = isAdmin ? adminNavigation : liderNavigation
 
   const SidebarContent = () => (
     <>

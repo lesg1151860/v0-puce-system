@@ -270,3 +270,82 @@ export async function verifySystemAccess(email: string): Promise<{ hasAccess: bo
     rol: systemUser.rol
   }
 }
+
+// Verificar intentos de login (para uso desde el cliente)
+export async function checkLoginAttempts(email: string): Promise<{ canAttempt: boolean; error?: string }> {
+  const supabase = await createClient()
+  
+  const { data: attemptData } = await supabase
+    .from("login_attempts")
+    .select("*")
+    .eq("correo_electronico", email.toLowerCase())
+    .single()
+
+  if (attemptData?.bloqueado_hasta) {
+    const blockedUntil = new Date(attemptData.bloqueado_hasta)
+    if (blockedUntil > new Date()) {
+      return { 
+        canAttempt: false, 
+        error: `Cuenta bloqueada temporalmente por seguridad. Intente nuevamente en ${BLOCK_DURATION_MINUTES} minutos.`
+      }
+    } else {
+      // Desbloquear si ya paso el tiempo
+      await supabase
+        .from("login_attempts")
+        .update({ intentos: 0, bloqueado_hasta: null })
+        .eq("correo_electronico", email.toLowerCase())
+    }
+  }
+
+  return { canAttempt: true }
+}
+
+// Registrar intento fallido de login (para uso desde el cliente)
+export async function registerFailedLoginAttempt(email: string): Promise<{ remainingAttempts?: number }> {
+  const supabase = await createClient()
+  const emailLower = email.toLowerCase()
+
+  const { data: existing } = await supabase
+    .from("login_attempts")
+    .select("*")
+    .eq("correo_electronico", emailLower)
+    .single()
+
+  if (existing) {
+    const newAttempts = existing.intentos + 1
+    const updateData: Record<string, unknown> = {
+      intentos: newAttempts,
+      ultimo_intento: new Date().toISOString(),
+    }
+
+    // RF05: Bloquear despues de 3 intentos
+    if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
+      const blockUntil = new Date()
+      blockUntil.setMinutes(blockUntil.getMinutes() + BLOCK_DURATION_MINUTES)
+      updateData.bloqueado_hasta = blockUntil.toISOString()
+    }
+
+    await supabase
+      .from("login_attempts")
+      .update(updateData)
+      .eq("correo_electronico", emailLower)
+
+    return { remainingAttempts: Math.max(0, MAX_LOGIN_ATTEMPTS - newAttempts) }
+  } else {
+    await supabase.from("login_attempts").insert({
+      correo_electronico: emailLower,
+      intentos: 1,
+      ultimo_intento: new Date().toISOString(),
+    })
+    return { remainingAttempts: MAX_LOGIN_ATTEMPTS - 1 }
+  }
+}
+
+// Limpiar intentos de login despues de login exitoso
+export async function clearLoginAttempts(email: string): Promise<void> {
+  const supabase = await createClient()
+  await supabase
+    .from("login_attempts")
+    .delete()
+    .eq("correo_electronico", email.toLowerCase())
+}

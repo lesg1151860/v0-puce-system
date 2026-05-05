@@ -16,7 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { loginSchema, type LoginFormData } from "@/lib/validations"
 import { generateCaptcha, validateCaptcha } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/client"
-import { loginWithCredentials } from "@/lib/auth-actions"
+import { checkLoginAttempts, registerFailedLoginAttempt, clearLoginAttempts } from "@/lib/auth-actions"
 
 function LoginContent() {
   const router = useRouter()
@@ -101,20 +101,54 @@ function LoginContent() {
     }
 
     try {
-      // RF01, RF03, RF05: Login con control de intentos y mensajes seguros
-      const result = await loginWithCredentials(data.email, data.password)
+      const supabase = createClient()
+      
+      // RF05: Verificar si la cuenta esta bloqueada
+      const attemptCheck = await checkLoginAttempts(data.email)
+      if (!attemptCheck.canAttempt) {
+        setError(attemptCheck.error || "Cuenta bloqueada temporalmente")
+        setIsLoading(false)
+        return
+      }
 
-      if (!result.success) {
-        setError(result.error || "Error al iniciar sesion")
-        if (result.remainingAttempts !== undefined) {
-          setRemainingAttempts(result.remainingAttempts)
+      // Intentar login con Supabase Auth en el cliente
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: data.email.toLowerCase(),
+        password: data.password,
+      })
+
+      if (authError || !authData.user) {
+        // Registrar intento fallido
+        const failResult = await registerFailedLoginAttempt(data.email)
+        setError("Credenciales incorrectas. Por favor verifique sus datos.")
+        if (failResult.remainingAttempts !== undefined) {
+          setRemainingAttempts(failResult.remainingAttempts)
         }
         refreshCaptcha()
         setIsLoading(false)
         return
       }
 
-      router.push("/")
+      // Verificar que el usuario este activo y obtener su rol
+      const { data: systemUser } = await supabase
+        .from("system_users")
+        .select("activo, rol")
+        .eq("auth_user_id", authData.user.id)
+        .single()
+
+      if (systemUser && !systemUser.activo) {
+        await supabase.auth.signOut()
+        setError("Su cuenta ha sido desactivada. Contacte al administrador.")
+        setIsLoading(false)
+        return
+      }
+
+      // Login exitoso - limpiar intentos
+      await clearLoginAttempts(data.email)
+
+      // Redirigir segun rol: ADMINISTRADOR -> /usuarios, LIDER -> /
+      const redirectPath = systemUser?.rol === "ADMINISTRADOR" ? "/usuarios" : "/"
+      router.push(redirectPath)
       router.refresh()
     } catch (err) {
       // RF03: Mensaje generico por seguridad

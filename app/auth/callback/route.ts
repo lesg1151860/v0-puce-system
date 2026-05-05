@@ -44,6 +44,17 @@ export async function GET(request: NextRequest) {
             .update({ auth_user_id: data.user.id })
             .eq("id", systemUser.id)
         }
+
+        // Obtener el rol para redireccionar correctamente
+        const { data: userWithRole } = await supabase
+          .from("system_users")
+          .select("rol")
+          .eq("correo_electronico", email.toLowerCase())
+          .single()
+
+        // Redirigir segun el rol: ADMINISTRADOR -> /usuarios, LIDER -> /
+        const redirectPath = userWithRole?.rol === "ADMINISTRADOR" ? "/usuarios" : "/"
+        return NextResponse.redirect(`${origin}${redirectPath}`)
       }
 
       return NextResponse.redirect(`${origin}${next}`)
