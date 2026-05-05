@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
-import { ShieldCheck, Eye, EyeOff, RefreshCw, Loader2, AlertTriangle } from "lucide-react"
+import { ShieldCheck, Eye, EyeOff, RefreshCw, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,27 +16,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { loginSchema, type LoginFormData } from "@/lib/validations"
 import { generateCaptcha, validateCaptcha } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/client"
-import { checkLoginAttempts, registerFailedLoginAttempt, clearLoginAttempts } from "@/lib/auth-actions"
 
-function LoginContent() {
+export default function LoginPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
   const [captcha, setCaptcha] = useState({ question: "", answer: 0 })
   const [error, setError] = useState("")
-  const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-
-  // Verificar errores de OAuth en la URL
-  useEffect(() => {
-    const errorParam = searchParams.get('error')
-    const messageParam = searchParams.get('message')
-    
-    if (errorParam && messageParam) {
-      setError(decodeURIComponent(messageParam))
-    }
-  }, [searchParams])
 
   const {
     register,
@@ -48,6 +35,7 @@ function LoginContent() {
   })
 
   useEffect(() => {
+    // Generar CAPTCHA inicial
     refreshCaptcha()
   }, [])
 
@@ -82,15 +70,7 @@ function LoginContent() {
 
   const onSubmit = async (data: LoginFormData) => {
     setError("")
-    setRemainingAttempts(null)
     setIsLoading(true)
-
-    // RF02: Validar campos no vacios (ya validado por el schema)
-    if (!data.email?.trim() || !data.password?.trim()) {
-      setError("Todos los campos son obligatorios.")
-      setIsLoading(false)
-      return
-    }
 
     // Validar CAPTCHA
     if (!validateCaptcha(data.captcha, captcha.answer)) {
@@ -102,57 +82,19 @@ function LoginContent() {
 
     try {
       const supabase = createClient()
-      
-      // RF05: Verificar si la cuenta esta bloqueada
-      const attemptCheck = await checkLoginAttempts(data.email)
-      if (!attemptCheck.canAttempt) {
-        setError(attemptCheck.error || "Cuenta bloqueada temporalmente")
-        setIsLoading(false)
-        return
-      }
-
-      // Intentar login con Supabase Auth en el cliente
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: data.email.toLowerCase(),
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
         password: data.password,
       })
 
-      if (authError || !authData.user) {
-        // Registrar intento fallido
-        const failResult = await registerFailedLoginAttempt(data.email)
-        setError("Credenciales incorrectas. Por favor verifique sus datos.")
-        if (failResult.remainingAttempts !== undefined) {
-          setRemainingAttempts(failResult.remainingAttempts)
-        }
-        refreshCaptcha()
-        setIsLoading(false)
-        return
+      if (error) {
+        throw error
       }
 
-      // Verificar que el usuario este activo y obtener su rol
-      const { data: systemUser } = await supabase
-        .from("system_users")
-        .select("activo, rol")
-        .eq("auth_user_id", authData.user.id)
-        .single()
-
-      if (systemUser && !systemUser.activo) {
-        await supabase.auth.signOut()
-        setError("Su cuenta ha sido desactivada. Contacte al administrador.")
-        setIsLoading(false)
-        return
-      }
-
-      // Login exitoso - limpiar intentos
-      await clearLoginAttempts(data.email)
-
-      // Redirigir segun rol: ADMINISTRADOR -> /usuarios, LIDER -> /
-      const redirectPath = systemUser?.rol === "ADMINISTRADOR" ? "/usuarios" : "/"
-      router.push(redirectPath)
+      router.push("/")
       router.refresh()
     } catch (err) {
-      // RF03: Mensaje generico por seguridad
-      setError("Credenciales incorrectas. Por favor verifique sus datos.")
+      setError(err instanceof Error ? err.message : "Error al iniciar sesion")
       refreshCaptcha()
     } finally {
       setIsLoading(false)
@@ -219,17 +161,7 @@ function LoginContent() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
               <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {remainingAttempts !== null && remainingAttempts > 0 && (
-              <Alert className="border-yellow-200 bg-yellow-50">
-                <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                <AlertDescription className="text-yellow-800">
-                  Intentos restantes: {remainingAttempts}. Despues de 3 intentos fallidos su cuenta sera bloqueada temporalmente.
-                </AlertDescription>
               </Alert>
             )}
 
@@ -312,20 +244,5 @@ function LoginContent() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 mx-auto"></div>
-          <p className="mt-2 text-slate-600">Cargando...</p>
-        </div>
-      </div>
-    }>
-      <LoginContent />
-    </Suspense>
   )
 }

@@ -10,63 +10,37 @@ import {
   LogOut,
   Menu,
   X,
-  Users,
 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 
-interface NavItem {
-  name: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  description?: string
-  adminOnly?: boolean
-  liderOnly?: boolean
-}
-
-// Navegacion para LIDER (Dashboard estadistico, SAC, SIUCE, Reportes)
-const liderNavigation: NavItem[] = [
+const navigation = [
   {
     name: "Dashboard",
     href: "/",
     icon: LayoutDashboard,
-    description: "Panel de Estadisticas",
-    liderOnly: true,
   },
   {
     name: "SAC",
     href: "/sac",
     icon: FileText,
-    description: "Sistema de Atencion al Ciudadano",
-    liderOnly: true,
+    description: "Sistema de Atención al Ciudadano",
   },
   {
     name: "SIUCE",
     href: "/siuce",
     icon: FileText,
-    description: "Sistema de Informacion Unificado de Convivencia Escolar",
-    liderOnly: true,
+    description: "Sistema de Información Unificado de Convivencia Escolar",
   },
+
   {
     name: "Reportes",
     href: "/reportes",
     icon: FileSpreadsheet,
-    description: "Generacion de Reportes Excel",
-    liderOnly: true,
-  },
-]
-
-// Navegacion para ADMINISTRADOR (solo Usuarios)
-const adminNavigation: NavItem[] = [
-  {
-    name: "Usuarios",
-    href: "/usuarios",
-    icon: Users,
-    description: "Gestion de Usuarios del Sistema",
-    adminOnly: true,
+    description: "Generación de Reportes Excel",
   },
 ]
 
@@ -74,34 +48,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
 
-  useEffect(() => {
-    const checkUserRole = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (user) {
-        setUserEmail(user.email || null)
-        
-        // Verificar si es admin en system_users
-        const { data: systemUser } = await supabase
-          .from("system_users")
-          .select("rol")
-          .eq("auth_user_id", user.id)
-          .single()
-        
-        if (systemUser?.rol === "ADMINISTRADOR") {
-          setIsAdmin(true)
-        }
-      }
-    }
-    
-    checkUserRole()
-  }, [])
-
-  // RF04: Cierre de sesion seguro
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -115,9 +62,6 @@ export function Sidebar() {
     }
     return pathname.startsWith(href)
   }
-
-  // Seleccionar navegacion segun rol
-  const filteredNavigation = isAdmin ? adminNavigation : liderNavigation
 
   const SidebarContent = () => (
     <>
@@ -134,7 +78,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {filteredNavigation.map((item) => {
+        {navigation.map((item) => {
           const active = isActive(item.href)
           return (
             <Link
@@ -165,20 +109,15 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* User Info & Logout Button */}
-      <div className="border-t border-slate-200 p-3 space-y-2">
-        {userEmail && (
-          <div className="px-3 py-2 text-xs text-slate-500 truncate">
-            {userEmail}
-          </div>
-        )}
+      {/* Logout Button */}
+      <div className="border-t border-slate-200 p-3">
         <Button
           variant="ghost"
           onClick={handleLogout}
           className="w-full justify-start text-slate-700 hover:bg-red-50 hover:text-red-700"
         >
           <LogOut className="mr-3 h-5 w-5" />
-          Cerrar Sesion
+          Cerrar Sesión
         </Button>
       </div>
     </>

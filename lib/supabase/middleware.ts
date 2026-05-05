@@ -34,12 +34,11 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Rutas protegidas - redirigir a login si no hay usuario
-  const protectedPaths = ['/', '/sac', '/siuce', '/reportes', '/usuarios']
+  const protectedPaths = ['/', '/sac', '/siuce', '/reportes']
   const isProtectedPath = protectedPaths.some(path => 
     request.nextUrl.pathname === path || 
     request.nextUrl.pathname.startsWith('/sac/') ||
-    request.nextUrl.pathname.startsWith('/siuce/') ||
-    request.nextUrl.pathname.startsWith('/usuarios/')
+    request.nextUrl.pathname.startsWith('/siuce/')
   )
 
   if (isProtectedPath && !user) {
@@ -48,17 +47,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Si el usuario esta autenticado y va a login, obtener su rol y redirigir
+  // Si el usuario esta autenticado y va a login, redirigir al dashboard
   if (request.nextUrl.pathname === '/login' && user) {
-    const { data: systemUser } = await supabase
-      .from("system_users")
-      .select("rol")
-      .eq("auth_user_id", user.id)
-      .single()
-    
     const url = request.nextUrl.clone()
-    // Administrador va a /usuarios, Lider va a /
-    url.pathname = systemUser?.rol === "ADMINISTRADOR" ? '/usuarios' : '/'
+    url.pathname = '/'
     return NextResponse.redirect(url)
   }
 
