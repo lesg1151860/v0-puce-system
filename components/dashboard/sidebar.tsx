@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
-  ShieldCheck,
   LayoutDashboard,
   FileText,
   FileSpreadsheet,
@@ -11,6 +10,7 @@ import {
   Menu,
   X,
 } from "lucide-react"
+import Image from "next/image"
 import { useState } from "react"
 
 import { cn } from "@/lib/utils"
@@ -64,13 +64,17 @@ export function Sidebar() {
   const SidebarContent = () => (
     <>
       {/* Logo */}
-      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 px-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white">
-          <ShieldCheck className="h-5 w-5" />
-        </div>
+      <div className="flex h-20 shrink-0 items-center gap-3 border-b border-slate-200 px-4">
+        <Image
+          src="/images/logo-puce.png"
+          alt="Logo PUCE"
+          width={56}
+          height={56}
+          className="rounded-full"
+        />
         <div>
           <span className="text-lg font-bold text-slate-900">PUCE</span>
-          <p className="text-xs text-slate-500 leading-tight">Plataforma Unificada de Seguimiento Educativo.</p>
+          <p className="text-xs text-slate-500 leading-tight">Plataforma Unificada de Convivencia Escolar</p>
         </div>
       </div>
 
@@ -133,10 +137,14 @@ export function Sidebar() {
           {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
         <div className="ml-4 flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
-            <ShieldCheck className="h-4 w-4" />
-          </div>
-          <span className="font-bold text-slate-900">SICE</span>
+          <Image
+            src="/images/logo-puce.png"
+            alt="Logo PUCE"
+            width={32}
+            height={32}
+            className="rounded-full"
+          />
+          <span className="font-bold text-slate-900">PUCE</span>
         </div>
       </div>
 
