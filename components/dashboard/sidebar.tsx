@@ -15,7 +15,7 @@ import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
+import { logout } from "@/lib/auth"
 
 const navigation = [
   {
@@ -49,11 +49,9 @@ export function Sidebar() {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+  const handleLogout = () => {
+    logout()
     router.push("/login")
-    router.refresh()
   }
 
   const isActive = (href: string) => {
