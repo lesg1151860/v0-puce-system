@@ -27,6 +27,7 @@ import { Progress } from "@/components/ui/progress"
 
 import { casoSIUCESchema, type CasoSIUCEFormData } from "@/lib/validations"
 import { getCaseSIUCE, updateCaseSIUCE, isRadicadoSIUCEDuplicado, isIdentificacionSIUCEDuplicada } from "@/lib/storage"
+import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
 import type { CasoSIUCE } from "@/lib/types"
 
 // Opciones de selección
@@ -267,21 +268,37 @@ export default function EditarCasoSIUCEPage() {
   setIsLoading(true)
   
   try {
-    // Validar que el radicado sea único (excluyendo el caso actual)
+    // Validar caracteres especiales en campos de texto
+    if (hasSpecialChars(data.victima) || hasSpecialChars(data.nombreAgresor)) {
+      setError(SPECIAL_CHARS_ERROR)
+      setIsLoading(false)
+      return
+    }
+
+    // Validar que el radicado sea unico (excluyendo el caso actual)
     if (isRadicadoSIUCEDuplicado(data.radicado, id)) {
-      setError("El radicado ya existe en otro caso. Por favor ingrese un radicado único.")
+      setError("El radicado ya existe en otro caso. Por favor ingrese un radicado unico.")
       setIsLoading(false)
       return
     }
 
-    // Validar que el número de identificación sea único (excluyendo el caso actual)
+    // Validar que el numero de identificacion sea unico (excluyendo el caso actual)
     if (isIdentificacionSIUCEDuplicada(data.numeroIdentificacion, id)) {
-      setError("El número de identificación ya existe en otro caso. Por favor verifique los datos.")
+      setError("El numero de identificacion ya existe en otro caso. Por favor verifique los datos.")
       setIsLoading(false)
       return
     }
 
-    updateCaseSIUCE(id, data)
+    // Normalizar campos de texto a mayusculas sin tildes
+    const normalizedData = {
+      ...data,
+      victima: sanitizeText(data.victima),
+      nombreAgresor: sanitizeText(data.nombreAgresor),
+      descripcionAvance: data.descripcionAvance ? sanitizeText(data.descripcionAvance) : undefined,
+      otroEvento: data.otroEvento ? sanitizeText(data.otroEvento) : undefined,
+    }
+
+    updateCaseSIUCE(id, normalizedData)
     router.push("/siuce")
   } catch (err) {
     setError("Error al actualizar el caso. Intente nuevamente.")

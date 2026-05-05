@@ -22,6 +22,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 import { casoSACBasicoSchema, type CasoSACBasicoFormData } from "@/lib/validations"
 import { createCaseSAC, isRadicadoSACDuplicado } from "@/lib/storage"
+import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
 
 const roles = [
   "Estudiante",
@@ -61,14 +62,27 @@ export default function NuevoCasoSACPage() {
     setIsLoading(true)
 
     try {
-      // Validar que el radicado sea único
-      if (isRadicadoSACDuplicado(data.radicado)) {
-        setError("El radicado ya existe en el sistema. Por favor ingrese un radicado único.")
+      // Validar caracteres especiales
+      if (hasSpecialChars(data.ciudadano)) {
+        setError(SPECIAL_CHARS_ERROR)
         setIsLoading(false)
         return
       }
 
-      createCaseSAC(data)
+      // Validar que el radicado sea unico
+      if (isRadicadoSACDuplicado(data.radicado)) {
+        setError("El radicado ya existe en el sistema. Por favor ingrese un radicado unico.")
+        setIsLoading(false)
+        return
+      }
+
+      // Normalizar texto a mayusculas sin tildes
+      const normalizedData = {
+        ...data,
+        ciudadano: sanitizeText(data.ciudadano),
+      }
+
+      createCaseSAC(normalizedData)
       router.push("/sac")
     } catch (err) {
       setError("Error al guardar el caso. Intente nuevamente.")

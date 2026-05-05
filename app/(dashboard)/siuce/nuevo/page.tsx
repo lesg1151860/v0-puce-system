@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge"
 
 import { casoSIUCESchema, type CasoSIUCEFormData } from "@/lib/validations"
 import { createCaseSIUCE, isRadicadoSIUCEDuplicado, isIdentificacionSIUCEDuplicada } from "@/lib/storage"
+import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
 
 // Opciones de selección
 const instituciones = [
@@ -242,21 +243,37 @@ export default function NuevoCasoSIUCEPage() {
   setIsLoading(true)
   
   try {
-    // Validar que el radicado sea único
+    // Validar caracteres especiales en campos de texto
+    if (hasSpecialChars(data.victima) || hasSpecialChars(data.nombreAgresor)) {
+      setError(SPECIAL_CHARS_ERROR)
+      setIsLoading(false)
+      return
+    }
+
+    // Validar que el radicado sea unico
     if (isRadicadoSIUCEDuplicado(data.radicado)) {
-      setError("El radicado ya existe en el sistema. Por favor ingrese un radicado único.")
+      setError("El radicado ya existe en el sistema. Por favor ingrese un radicado unico.")
       setIsLoading(false)
       return
     }
 
-    // Validar que el número de identificación sea único
+    // Validar que el numero de identificacion sea unico
     if (isIdentificacionSIUCEDuplicada(data.numeroIdentificacion)) {
-      setError("El número de identificación ya existe en el sistema. Por favor verifique los datos.")
+      setError("El numero de identificacion ya existe en el sistema. Por favor verifique los datos.")
       setIsLoading(false)
       return
     }
 
-    createCaseSIUCE(data)
+    // Normalizar campos de texto a mayusculas sin tildes
+    const normalizedData = {
+      ...data,
+      victima: sanitizeText(data.victima),
+      nombreAgresor: sanitizeText(data.nombreAgresor),
+      descripcionAvance: data.descripcionAvance ? sanitizeText(data.descripcionAvance) : undefined,
+      otroEvento: data.otroEvento ? sanitizeText(data.otroEvento) : undefined,
+    }
+
+    createCaseSIUCE(normalizedData)
     router.push("/siuce")
   } catch (err) {
     setError("Error al guardar el caso. Intente nuevamente.")

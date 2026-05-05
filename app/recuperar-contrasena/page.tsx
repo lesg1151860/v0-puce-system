@@ -4,7 +4,8 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
-import { ShieldCheck, ArrowLeft, Loader2, Mail } from "lucide-react"
+import Image from "next/image"
+import { ArrowLeft, Loader2, Mail } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,8 +45,14 @@ export default function RecuperarContrasenaPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white">
-            <ShieldCheck className="h-7 w-7" />
+          <div className="mx-auto">
+            <Image
+              src="/images/logo-puce.png"
+              alt="Logo PUCE"
+              width={80}
+              height={80}
+              className="rounded-full"
+            />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold text-slate-900">Recuperar Contraseña</CardTitle>
