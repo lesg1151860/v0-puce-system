@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
-import { ShieldCheck, Eye, EyeOff, RefreshCw, Loader2 } from "lucide-react"
+import { ShieldCheck, Eye, EyeOff, RefreshCw, Loader2, AlertTriangle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,12 +16,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { loginSchema, type LoginFormData } from "@/lib/validations"
 import { generateCaptcha, validateCaptcha } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/client"
+import { loginWithCredentials } from "@/lib/auth-actions"
 
 export default function LoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [captcha, setCaptcha] = useState({ question: "", answer: 0 })
   const [error, setError] = useState("")
+  const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
@@ -35,7 +37,6 @@ export default function LoginPage() {
   })
 
   useEffect(() => {
-    // Generar CAPTCHA inicial
     refreshCaptcha()
   }, [])
 
@@ -70,7 +71,15 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     setError("")
+    setRemainingAttempts(null)
     setIsLoading(true)
+
+    // RF02: Validar campos no vacios (ya validado por el schema)
+    if (!data.email?.trim() || !data.password?.trim()) {
+      setError("Todos los campos son obligatorios.")
+      setIsLoading(false)
+      return
+    }
 
     // Validar CAPTCHA
     if (!validateCaptcha(data.captcha, captcha.answer)) {
@@ -81,20 +90,24 @@ export default function LoginPage() {
     }
 
     try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      })
+      // RF01, RF03, RF05: Login con control de intentos y mensajes seguros
+      const result = await loginWithCredentials(data.email, data.password)
 
-      if (error) {
-        throw error
+      if (!result.success) {
+        setError(result.error || "Error al iniciar sesion")
+        if (result.remainingAttempts !== undefined) {
+          setRemainingAttempts(result.remainingAttempts)
+        }
+        refreshCaptcha()
+        setIsLoading(false)
+        return
       }
 
       router.push("/")
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al iniciar sesion")
+      // RF03: Mensaje generico por seguridad
+      setError("Credenciales incorrectas. Por favor verifique sus datos.")
       refreshCaptcha()
     } finally {
       setIsLoading(false)
@@ -161,7 +174,17 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
               <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {remainingAttempts !== null && remainingAttempts > 0 && (
+              <Alert className="border-yellow-200 bg-yellow-50">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-800">
+                  Intentos restantes: {remainingAttempts}. Despues de 3 intentos fallidos su cuenta sera bloqueada temporalmente.
+                </AlertDescription>
               </Alert>
             )}
 
