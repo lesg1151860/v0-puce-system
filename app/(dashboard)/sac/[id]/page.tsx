@@ -86,24 +86,26 @@ export default function EditarCasoSACPage() {
     resolver: zodResolver(casoSACExtendidoSchema),
   })
 
-  // Automatizar estado a TERMINADO si hay respuesta al ciudadano o prorroga
+  // Automatizar respuesta al ciudadano si hay prorroga o radicado respuesta
+  // La prorroga ES una forma de respuesta al ciudadano
   useEffect(() => {
-    if (respondido || prorroga) {
+    if (prorroga || radicadoRespuesta) {
+      setRespondido(true)
+      setValue("respondido", true)
+    }
+  }, [prorroga, radicadoRespuesta, setValue])
+
+  // Automatizar estado a TERMINADO SOLO si hay respuesta al ciudadano (SI)
+  // No puede haber TERMINADO con respuesta NO
+  useEffect(() => {
+    if (respondido) {
       setEstadoCaso("TERMINADO")
       setValue("estado", "TERMINADO")
       setEstadoAutoTerminado(true)
     } else {
       setEstadoAutoTerminado(false)
     }
-  }, [respondido, prorroga, setValue])
-
-  // Automatizar respuesta al ciudadano si hay radicado respuesta
-  useEffect(() => {
-    if (radicadoRespuesta) {
-      setRespondido(true)
-      setValue("respondido", true)
-    }
-  }, [radicadoRespuesta, setValue])
+  }, [respondido, setValue])
 
   useEffect(() => {
     const data = getCaseSAC(id)
@@ -593,7 +595,7 @@ export default function EditarCasoSACPage() {
                   </SelectContent>
                 </Select>
                 {estadoAutoTerminado ? (
-                  <p className="text-xs text-green-600 font-medium">Estado cambiado automaticamente a TERMINADO (respuesta al ciudadano o prorroga activa)</p>
+                  <p className="text-xs text-green-600 font-medium">Estado cambiado automaticamente a TERMINADO (respuesta al ciudadano = SI)</p>
                 ) : (
                   <p className="text-xs text-slate-500">Situacion administrativa actual del proceso</p>
                 )}
