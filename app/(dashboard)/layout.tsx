@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
-import { isAuthenticated } from "@/lib/auth"
+import { isAuthenticated, isAdmin } from "@/lib/auth"
 import { seedDemoData } from "@/lib/storage"
 
 export default function DashboardLayout({
@@ -18,6 +18,12 @@ export default function DashboardLayout({
     // Verificar autenticación
     if (!isAuthenticated()) {
       router.push("/login")
+      return
+    }
+
+    // Si es administrador, redirigir al panel de admin
+    if (isAdmin()) {
+      router.push("/admin")
       return
     }
 

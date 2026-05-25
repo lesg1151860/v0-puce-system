@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 import { loginSchema, type LoginFormData } from "@/lib/validations"
-import { login, generateCaptcha, validateCaptcha, isAuthenticated } from "@/lib/auth"
+import { login, generateCaptcha, validateCaptcha, isAuthenticated, getCurrentUserRole } from "@/lib/auth"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -34,9 +34,14 @@ export default function LoginPage() {
   })
 
   useEffect(() => {
-    // Verificar si ya está autenticado
+    // Verificar si ya está autenticado y redirigir según rol
     if (isAuthenticated()) {
-      router.push("/")
+      const rol = getCurrentUserRole()
+      if (rol === "ADMINISTRADOR") {
+        router.push("/admin")
+      } else {
+        router.push("/")
+      }
     }
     // Generar CAPTCHA inicial
     refreshCaptcha()
@@ -63,10 +68,15 @@ export default function LoginPage() {
     // Intentar login
     const result = login(data.email, data.password)
 
-    if (result.success) {
-      router.push("/")
+    if (result.success && result.user) {
+      // Redirigir según el rol del usuario
+      if (result.user.rol === "ADMINISTRADOR") {
+        router.push("/admin")
+      } else {
+        router.push("/")
+      }
     } else {
-      setError(result.error || "Error al iniciar sesión")
+      setError(result.error || "Error al iniciar sesion")
       refreshCaptcha()
     }
 
@@ -179,8 +189,14 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 pt-6 border-t border-slate-200">
+            <p className="text-xs text-center text-slate-500 mb-2">
+              Credenciales de prueba:
+            </p>
             <p className="text-xs text-center text-slate-500">
-              Credenciales de prueba: admin@convivencia.edu.co / admin123
+              Admin: admin@puce.edu.co / admin123
+            </p>
+            <p className="text-xs text-center text-slate-500">
+              Lider: lider@puce.edu.co / lider123
             </p>
           </div>
         </CardContent>
