@@ -72,6 +72,8 @@ export default function EditarCasoSACPage() {
   const [contestacionIE, setContestacionIE] = useState(false)
   const [respondido, setRespondido] = useState(false)
   const [radicadoRespuesta, setRadicadoRespuesta] = useState("")
+  const [estadoCaso, setEstadoCaso] = useState<string>("EN SEGUIMIENTO")
+  const [estadoAutoTerminado, setEstadoAutoTerminado] = useState(false)
 
   const {
     register,
@@ -85,12 +87,25 @@ export default function EditarCasoSACPage() {
   })
 
   // Automatizar respuesta al ciudadano si hay prorroga o radicado respuesta
+  // La prorroga ES una forma de respuesta al ciudadano
   useEffect(() => {
     if (prorroga || radicadoRespuesta) {
       setRespondido(true)
       setValue("respondido", true)
     }
   }, [prorroga, radicadoRespuesta, setValue])
+
+  // Automatizar estado a TERMINADO SOLO si hay respuesta al ciudadano (SI)
+  // No puede haber TERMINADO con respuesta NO
+  useEffect(() => {
+    if (respondido) {
+      setEstadoCaso("TERMINADO")
+      setValue("estado", "TERMINADO")
+      setEstadoAutoTerminado(true)
+    } else {
+      setEstadoAutoTerminado(false)
+    }
+  }, [respondido, setValue])
 
   useEffect(() => {
     const data = getCaseSAC(id)
@@ -102,6 +117,7 @@ export default function EditarCasoSACPage() {
       setContestacionIE(data.contestacionIE || false)
       setRespondido(data.respondido || false)
       setRadicadoRespuesta(data.radicadoRespuesta || "")
+      setEstadoCaso(data.estado)
       
       // Reset form with existing data
       reset({
@@ -140,6 +156,20 @@ export default function EditarCasoSACPage() {
       setError(SPECIAL_CHARS_ERROR)
       setIsLoading(false)
       return
+    }
+
+    // Validar que si hay prorroga, fecha y radicado sean obligatorios
+    if (prorroga) {
+      if (!data.fechaNuevaProrroga || data.fechaNuevaProrroga.trim() === "") {
+        setError("Si existe prorroga, la fecha de prorroga es obligatoria.")
+        setIsLoading(false)
+        return
+      }
+      if (!data.radicadoProrroga || data.radicadoProrroga.trim() === "") {
+        setError("Si existe prorroga, el radicado de prorroga es obligatorio.")
+        setIsLoading(false)
+        return
+      }
     }
 
     // Validar que el radicado sea unico (excluyendo el caso actual)
@@ -412,23 +442,25 @@ export default function EditarCasoSACPage() {
               {prorroga && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="fechaNuevaProrroga">Fecha Nueva Prórroga</Label>
+                    <Label htmlFor="fechaNuevaProrroga">Fecha Nueva Prorroga *</Label>
                     <Input
                       id="fechaNuevaProrroga"
                       type="date"
                       {...register("fechaNuevaProrroga")}
+                      className="border-orange-300 focus:border-orange-500"
                     />
-                    <p className="text-xs text-slate-500">Nueva fecha límite de vencimiento</p>
+                    <p className="text-xs text-orange-600">Obligatorio - Nueva fecha limite de vencimiento</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="radicadoProrroga">Radicado Prórroga</Label>
+                    <Label htmlFor="radicadoProrroga">Radicado Prorroga *</Label>
                     <Input
                       id="radicadoProrroga"
                       placeholder="Ej: CUC2024EO002434"
                       {...register("radicadoProrroga")}
+                      className="border-orange-300 focus:border-orange-500"
                     />
-                    <p className="text-xs text-slate-500">Código donde se notifica la ampliación</p>
+                    <p className="text-xs text-orange-600">Obligatorio - Codigo donde se notifica la ampliacion</p>
                   </div>
                 </>
               )}
@@ -542,10 +574,16 @@ export default function EditarCasoSACPage() {
               <div className="space-y-2">
                 <Label htmlFor="estado">Estado *</Label>
                 <Select
-                  defaultValue={caso.estado}
-                  onValueChange={(value) => setValue("estado", value as CasoSACExtendidoFormData["estado"])}
+                  value={estadoCaso}
+                  onValueChange={(value) => {
+                    if (!estadoAutoTerminado) {
+                      setEstadoCaso(value)
+                      setValue("estado", value as CasoSACExtendidoFormData["estado"])
+                    }
+                  }}
+                  disabled={estadoAutoTerminado}
                 >
-                  <SelectTrigger className={errors.estado ? "border-red-500" : ""}>
+                  <SelectTrigger className={`${errors.estado ? "border-red-500" : ""} ${estadoAutoTerminado ? "bg-slate-100" : ""}`}>
                     <SelectValue placeholder="Selecciona el estado" />
                   </SelectTrigger>
                   <SelectContent>
@@ -556,7 +594,11 @@ export default function EditarCasoSACPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-500">Situación administrativa actual del proceso</p>
+                {estadoAutoTerminado ? (
+                  <p className="text-xs text-green-600 font-medium">Estado cambiado automaticamente a TERMINADO (respuesta al ciudadano = SI)</p>
+                ) : (
+                  <p className="text-xs text-slate-500">Situacion administrativa actual del proceso</p>
+                )}
                 {errors.estado && (
                   <p className="text-sm text-red-500">{errors.estado.message}</p>
                 )}

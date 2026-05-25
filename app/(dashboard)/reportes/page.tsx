@@ -58,88 +58,89 @@ export default function ReportesPage() {
       // Crear workbook
       const workbook = XLSX.utils.book_new()
 
-      // Hoja SAC
+      // Hoja SAC - Orden segun documentacion estructurada
       const sacData = casosSAC.map((caso) => ({
         "Radicado": caso.radicado,
-        "Ciudadano": caso.ciudadano,
-        "Fecha Radicación": caso.fechaRadicacion,
-        "Rol": caso.rol,
+        "Fecha de Radicacion": caso.fechaRadicacion,
         "Estado": caso.estado,
+        "Respondido": caso.respondido ? "SI" : "NO",
         "Radicado Respuesta": caso.radicadoRespuesta || "",
-        "Traslado I.E.": caso.trasladoIE ? "SÍ" : "NO",
-        "Radicado Externa": caso.radicadoExterna || "",
-        "Respondido": caso.respondido ? "SÍ" : "NO",
-        "Prórroga": caso.prorroga ? "SÍ" : "NO",
-        "Fecha Nueva Prórroga": caso.fechaNuevaProrroga || "",
-        "Radicado Prórroga": caso.radicadoProrroga || "",
-        "Contestación I.E.": caso.contestacionIE ? "SÍ" : "NO",
-        "Radicado Contestación": caso.radicadoContestacion || "",
+        "Ciudadano": caso.ciudadano,
+        "Rol": caso.rol,
         "Estudiante": caso.estudiante || "",
-        "Institución contra quien se dirige": caso.institucionContraQuienSeDirige || "",
-        "Situación": caso.situacion || "",
+        "Institucion contra quien se dirige": caso.institucionContraQuienSeDirige || "",
+        "Situacion": caso.situacion || "",
+        "Descripción": caso.descripcion || "",
+        "Prorroga": caso.prorroga ? "SI" : "NO",
+        "Fecha Nueva Prorroga": caso.fechaNuevaProrroga || "",
+        "Radicado Prorroga": caso.radicadoProrroga || "",
+        "Contestacion I.E.": caso.contestacionIE ? "SI" : "NO",
+        "Radicado Contestacion": caso.radicadoContestacion || "",
+        "Traslado a I.E.": caso.trasladoIE ? "SI" : "NO",
+        "Radicado Externa": caso.radicadoExterna || "",
         "SAC Respuesta": caso.sacRespuesta || "",
       }))
 
       if (sacData.length > 0) {
         const sacSheet = XLSX.utils.json_to_sheet(sacData)
-        // Ajustar ancho de columnas
+        // Ajustar ancho de columnas - Orden segun documentacion
         sacSheet["!cols"] = [
           { wch: 18 }, // Radicado
           { wch: 25 }, // Ciudadano
-          { wch: 15 }, // Fecha
-          { wch: 15 }, // Rol
-          { wch: 15 }, // Estado
+          { wch: 18 }, // Fecha de Radicacion
           { wch: 18 }, // Radicado Respuesta
-          { wch: 12 }, // Traslado I.E.
+          { wch: 15 }, // Rol
+          { wch: 14 }, // Traslado a I.E.
           { wch: 18 }, // Radicado Externa
           { wch: 12 }, // Respondido
-          { wch: 10 }, // Prórroga
-          { wch: 18 }, // Fecha Nueva Prórroga
-          { wch: 18 }, // Radicado Prórroga
-          { wch: 15 }, // Contestación I.E.
-          { wch: 20 }, // Radicado Contestación
+          { wch: 10 }, // Prorroga
+          { wch: 18 }, // Fecha Nueva Prorroga
+          { wch: 18 }, // Radicado Prorroga
+          { wch: 15 }, // Contestacion I.E.
+          { wch: 20 }, // Radicado Contestacion
           { wch: 25 }, // Estudiante
-          { wch: 30 }, // Institución
-          { wch: 12 }, // Situación
-          { wch: 12 }, // SAC Respuesta
+          { wch: 30 }, // Institucion contra quien se dirige
+          { wch: 12 }, // Situacion
+          { wch: 14 }, // SAC Respuesta
+          { wch: 15 }, // Estado
         ]
         XLSX.utils.book_append_sheet(workbook, sacSheet, "SAC")
       }
 
-      // Hoja SIUCE
+      // Hoja SIUCE - Orden segun documentacion estructurada
       const siuceData = casosSIUCE.map((caso) => ({
         "Radicado": caso.radicado,
         "Avance General (%)": caso.avanceGeneral,
         "Estado": caso.estado,
-        "Institución Educativa": caso.ie,
-        "Víctima": caso.victima,
-        "Tipo Identificación": caso.tipoIdentificacion,
-        "Número Identificación": caso.numeroIdentificacion,
+        "I.E.": caso.ie,
+        "Victima": caso.victima,
+        "Tipo de Identificacion": caso.tipoIdentificacion,
+        "Numero (identificacion)": caso.numeroIdentificacion,
         "Grado": caso.grado,
-        "Daño Principal": caso.danoPrincipal,
-        "Daño Secundario": caso.danoSecundario || "",
-        "Daño Terciario": caso.danoTerciario || "",
-        "Tipo Agresión": caso.tipoAgresion || "",
-        "Clasificación": caso.clasificacion,
-        "Repetitivo": caso.repetitivo ? "SÍ" : "NO",
+        "Dano (Dano Principal)": caso.danoPrincipal,
+        "Dano 2 (Dano Secundario)": caso.danoSecundario || "",
+        "Dano 3 (Dano Terciario)": caso.danoTerciario || "",
+        "Tipo de Agresion": caso.tipoAgresion || "",
+        "Repetitivo": caso.repetitivo ? "SI" : "NO",
         "Evento Generador": caso.eventoGenerador,
-        "Otro Evento": caso.otroEvento || "",
+        "Otro (evento generador)": caso.otroEventoGenerador || "",
         "Rol Agresor": caso.rolAgresor,
         "Nombre Agresor": caso.nombreAgresor,
+        "Clasificacion": caso.clasificacion,
         "Lugar": caso.lugar,
         "Fecha Ocurrencia": caso.fechaOcurrencia,
         "Fecha Registro": caso.fechaRegistro,
-        "Seguimiento I.E.": caso.seguimientoIE ? "SÍ" : "NO",
-        "Núm. Seguimiento I.E.": caso.numeroSeguimientoIE || 0,
-        "Seguimiento Policía": caso.seguimientoPolicia ? "SÍ" : "NO",
-        "Núm. Seguimiento Policía": caso.numeroSeguimientoPolicia || 0,
-        "CEC": caso.cec ? "SÍ" : "NO",
-        "Acciones I.E.": caso.accionesIE || "",
+        "Seguimiento I.E.": caso.seguimientoIE ? "SI" : "NO",
+        "Numero (seguimiento I.E.)": caso.numeroSeguimientoIE || 0,
+        "Seguimiento Policia": caso.seguimientoPolicia ? "SI" : "NO",
+        "Numero (seguimiento Policia)": caso.numeroSeguimientoPolicia || 0,
+        "CEC (Comite Escolar de Convivencia)": caso.cec ? "SI" : "NO",
+        "Acciones de I.E.": caso.accionesIE || "",
         "Avance I.E. (%)": caso.avanceIE,
-        "Acciones S.E.M.": caso.accionesSEM || "",
+        "Acciones de S.E.M.": caso.accionesSEM || "",
         "Avance S.E.M. (%)": caso.avanceSEM,
-        "Descripción Avance": caso.descripcionAvance || "",
-        "Entidades Externas": caso.entidadesExternas || "",
+        "Descripcion Avance": caso.descripcionAvance || "",
+        "Entidades Externas (Radicado de Respuesta)": caso.entidadesExternas || "",
         "Fecha Radicado E. Externas": caso.fechaRadicadoExternas || "",
       }))
 

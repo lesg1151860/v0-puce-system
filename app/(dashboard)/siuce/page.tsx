@@ -9,6 +9,7 @@ import {
   Trash2,
   AlertTriangle,
   Filter,
+  X,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -122,6 +123,17 @@ export default function SIUCEListPage() {
     loadCases()
   }
 
+  // Verificar si hay filtros activos
+  const hayFiltrosActivos = searchTerm !== "" || estadoFilter !== "todos" || institucionFilter !== "todas" || clasificacionFilter !== "todas"
+
+  // Limpiar todos los filtros
+  const limpiarFiltros = () => {
+    setSearchTerm("")
+    setEstadoFilter("todos")
+    setInstitucionFilter("todas")
+    setClasificacionFilter("todas")
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -195,6 +207,19 @@ export default function SIUCEListPage() {
                   <SelectItem value="TERMINADO">Terminado</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Boton Limpiar Filtros */}
+              {hayFiltrosActivos && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={limpiarFiltros}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Limpiar filtros
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
