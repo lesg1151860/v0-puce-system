@@ -158,10 +158,14 @@ export interface CasoSIUCE {
   updatedAt: string
 }
 
+// Roles del sistema
+export type RolUsuario = "ADMINISTRADOR" | "LIDER"
+
 // Interfaz de usuario
 export interface Usuario {
   email: string
   name: string
+  rol: RolUsuario
 }
 
 // Estado de autenticación
