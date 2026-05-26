@@ -144,7 +144,7 @@ export default function SACListPage() {
               {casosSinRespuesta} sin respuesta
             </Badge>
           )}
-          <Link href="/sac/nuevo">
+          <Link href="/lider/sac/nuevo">
             <Button className="bg-blue-600 hover:bg-blue-700">
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Caso
@@ -261,7 +261,7 @@ export default function SACListPage() {
                   : "Comienza registrando un nuevo caso"}
               </p>
               {!searchTerm && estadoFilter === "todos" && institucionFilter === "todas" && clasificacionFilter === "todas" && respuestaFilter === "todas" && (
-                <Link href="/sac/nuevo" className="mt-4">
+                <Link href="/lider/sac/nuevo" className="mt-4">
                   <Button className="bg-blue-600 hover:bg-blue-700">
                     <Plus className="mr-2 h-4 w-4" />
                     Registrar Caso

@@ -188,7 +188,7 @@ export default function EditarCasoSACPage() {
     }
 
     updateCaseSAC(id, normalizedData)
-    router.push("/sac")
+    router.push("/lider/sac")
   } catch (err) {
     setError("Error al actualizar el caso. Intente nuevamente.")
   } finally {
@@ -201,7 +201,7 @@ export default function EditarCasoSACPage() {
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <h2 className="text-xl font-bold text-slate-900 mb-2">Caso no encontrado</h2>
         <p className="text-slate-600 mb-4">El caso que buscas no existe o fue eliminado.</p>
-        <Link href="/sac">
+        <Link href="/lider/sac">
           <Button className="bg-blue-600 hover:bg-blue-700">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver al listado
@@ -223,7 +223,7 @@ export default function EditarCasoSACPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/sac">
+        <Link href="/lider/sac">
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -609,7 +609,7 @@ export default function EditarCasoSACPage() {
 
         {/* Actions */}
         <div className="flex justify-end gap-4">
-          <Link href="/sac">
+          <Link href="/lider/sac">
             <Button type="button" variant="outline">
               Cancelar
             </Button>
