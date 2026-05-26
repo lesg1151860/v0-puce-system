@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
@@ -15,10 +14,9 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 import { loginSchema, type LoginFormData } from "@/lib/validations"
-import { login, generateCaptcha, validateCaptcha, isAuthenticated, getCurrentUserRole } from "@/lib/auth"
+import { generateCaptcha, validateCaptcha } from "@/lib/auth"
 
 export default function LoginPage() {
-  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [captcha, setCaptcha] = useState({ question: "", answer: 0 })
   const [error, setError] = useState("")
@@ -33,19 +31,10 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   })
 
+  // Generamos el CAPTCHA al cargar, sin verificaciones de sesión aquí para evitar bucles
   useEffect(() => {
-    // Verificar si ya está autenticado y redirigir según rol
-    if (isAuthenticated()) {
-      const rol = getCurrentUserRole()
-      if (rol === "ADMINISTRADOR") {
-        router.push("/admin")
-      } else {
-        router.push("/")
-      }
-    }
-    // Generar CAPTCHA inicial
     refreshCaptcha()
-  }, [router])
+  }, [])
 
   const refreshCaptcha = () => {
     const newCaptcha = generateCaptcha()
@@ -57,7 +46,6 @@ export default function LoginPage() {
     setError("")
     setIsLoading(true)
 
-    // Validar CAPTCHA
     if (!validateCaptcha(data.captcha, captcha.answer)) {
       setError("Respuesta del CAPTCHA incorrecta")
       refreshCaptcha()
@@ -65,22 +53,60 @@ export default function LoginPage() {
       return
     }
 
-    // Intentar login
-    const result = login(data.email, data.password)
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/auth/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: data.email, 
+          password: data.password,
+        }),
+      })
 
-    if (result.success && result.user) {
-      // Redirigir según el rol del usuario
-      if (result.user.rol === "ADMINISTRADOR") {
-        router.push("/admin")
+      const result = await response.json()
+      console.log("JSON completo recibido de Django:", result) // Diagnóstico para ver F12
+
+      if (response.ok) {
+        // 1. Guardar los tokens en cookies con rutas explícitas
+        document.cookie = `access_token=${result.access}; path=/; max-age=86400; SameSite=Lax;`
+        document.cookie = `refresh_token=${result.refresh}; path=/; max-age=604800; SameSite=Lax;`
+        
+        // 2. Extracción ultra-segura del rol (por si viene de Django o usamos el fallback del email)
+        const rawRole = result.role || result.rol || result.user?.role || result.user?.rol || (data.email.includes("admin") ? "ADMINISTRADOR" : "LIDER")
+        
+        // Normalizar: quitar tildes, pasar a mayúsculas y remover espacios
+        const userRole = String(rawRole)
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toUpperCase()
+          .trim()
+
+        // Guardamos el rol limpio en la cookie
+        document.cookie = `user_role=${userRole}; path=/; max-age=86400; SameSite=Lax;`
+        
+        // 3. Redirección limpia (Hard Navigation) condicionada por el rol
+        if (userRole === "LIDER") {
+          window.location.replace("/lider")
+        } else if (userRole === "ADMINISTRADOR") {
+          window.location.replace("/admin")
+        } else {
+          setError(`El servidor devolvió un rol no configurado: "${rawRole}"`)
+          setIsLoading(false)
+          return
+        }
       } else {
-        router.push("/")
+        setError("Usuario o contraseña incorrectos")
+        refreshCaptcha()
       }
-    } else {
-      setError(result.error || "Error al iniciar sesion")
+    } catch (err) {
+      console.error("Error conectando con el servidor:", err)
+      setError("Error de conexión con el servidor backend")
       refreshCaptcha()
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (
@@ -93,6 +119,7 @@ export default function LoginPage() {
               alt="Logo PUCE"
               width={80}
               height={80}
+              priority
               className="rounded-full"
             />
           </div>
@@ -112,11 +139,11 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
+              <Label htmlFor="email">Usuario</Label>
               <Input
                 id="email"
-                type="email"
-                placeholder="correo@ejemplo.com"
+                type="text"
+                placeholder="Tu nombre de usuario"
                 {...register("email")}
                 className={errors.email ? "border-red-500" : ""}
               />
@@ -190,13 +217,10 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-slate-200">
             <p className="text-xs text-center text-slate-500 mb-2">
-              Credenciales de prueba:
+              Credenciales requeridas:
             </p>
             <p className="text-xs text-center text-slate-500">
-              Admin: admin@puce.edu.co / admin123
-            </p>
-            <p className="text-xs text-center text-slate-500">
-              Lider: lider@puce.edu.co / lider123
+              Usa un usuario registrado en tu base de datos de Django
             </p>
           </div>
         </CardContent>
