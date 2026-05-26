@@ -295,11 +295,11 @@ export default function EditarCasoSIUCEPage() {
       victima: sanitizeText(data.victima),
       nombreAgresor: sanitizeText(data.nombreAgresor),
       descripcionAvance: data.descripcionAvance ? sanitizeText(data.descripcionAvance) : undefined,
-      otroEvento: data.otroEvento ? sanitizeText(data.otroEvento) : undefined,
+      otroEventoGenerador: data.otroEventoGenerador ? sanitizeText(data.otroEventoGenerador) : undefined,
     }
 
     updateCaseSIUCE(id, normalizedData)
-    router.push("/siuce")
+    router.push("/lider/siuce")
   } catch (err) {
     setError("Error al actualizar el caso. Intente nuevamente.")
   } finally {
@@ -312,7 +312,7 @@ export default function EditarCasoSIUCEPage() {
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <h2 className="text-xl font-bold text-slate-900 mb-2">Caso no encontrado</h2>
         <p className="text-slate-600 mb-4">El caso que buscas no existe o fue eliminado.</p>
-        <Link href="/siuce">
+        <Link href="/lider/siuce">
           <Button className="bg-orange-600 hover:bg-orange-700">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver al listado
@@ -334,7 +334,7 @@ export default function EditarCasoSIUCEPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/siuce">
+        <Link href="/lider/siuce">
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -812,7 +812,7 @@ export default function EditarCasoSIUCEPage() {
 
         {/* Actions */}
         <div className="flex justify-end gap-4">
-          <Link href="/siuce">
+          <Link href="/lider/siuce">
             <Button type="button" variant="outline">Cancelar</Button>
           </Link>
           <Button type="submit" className="bg-orange-600 hover:bg-orange-700" disabled={isLoading}>

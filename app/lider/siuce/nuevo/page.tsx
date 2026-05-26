@@ -270,11 +270,11 @@ export default function NuevoCasoSIUCEPage() {
       victima: sanitizeText(data.victima),
       nombreAgresor: sanitizeText(data.nombreAgresor),
       descripcionAvance: data.descripcionAvance ? sanitizeText(data.descripcionAvance) : undefined,
-      otroEvento: data.otroEvento ? sanitizeText(data.otroEvento) : undefined,
+      otroEvento: data.otroEventoGenerador ? sanitizeText(data.otroEventoGenerador) : undefined,
     }
 
     createCaseSIUCE(normalizedData)
-    router.push("/siuce")
+    router.push("/lider/siuce")
   } catch (err) {
     setError("Error al guardar el caso. Intente nuevamente.")
   } finally {
@@ -286,7 +286,7 @@ export default function NuevoCasoSIUCEPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/siuce">
+        <Link href="/lider/siuce">
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -823,7 +823,7 @@ export default function NuevoCasoSIUCEPage() {
 
         {/* Actions */}
         <div className="flex justify-end gap-4">
-          <Link href="/siuce">
+          <Link href="/lider/siuce">
             <Button type="button" variant="outline">Cancelar</Button>
           </Link>
           <Button type="submit" className="bg-orange-600 hover:bg-orange-700" disabled={isLoading}>

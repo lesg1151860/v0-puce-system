@@ -142,7 +142,7 @@ export default function SIUCEListPage() {
           <h1 className="text-2xl font-bold text-slate-900">Casos SIUCE</h1>
           <p className="text-slate-600">Sistema de Informacion Unificado de Convivencia Escolar</p>
         </div>
-        <Link href="/siuce/nuevo">
+        <Link href="/lider/siuce/nuevo">
           <Button className="bg-orange-600 hover:bg-orange-700">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Caso
@@ -247,7 +247,7 @@ export default function SIUCEListPage() {
                   : "Comienza registrando un nuevo caso"}
               </p>
               {!searchTerm && estadoFilter === "todos" && institucionFilter === "todas" && clasificacionFilter === "todas" && (
-                <Link href="/siuce/nuevo" className="mt-4">
+                <Link href="/lider/siuce/nuevo" className="mt-4">
                   <Button className="bg-orange-600 hover:bg-orange-700">
                     <Plus className="mr-2 h-4 w-4" />
                     Registrar Caso
@@ -295,7 +295,7 @@ export default function SIUCEListPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Link href={`/siuce/${caso.id}`}>
+                          <Link href={`/lider/siuce/${caso.id}`}>
                             <Button variant="outline" size="sm">
                               <Pencil className="h-4 w-4" />
                               <span className="sr-only">Editar</span>
