@@ -2,7 +2,7 @@ import { z } from "zod"
 
 // Esquema de login
 export const loginSchema = z.object({
-  email: z.string().email("Correo electrónico inválido"),
+  username: z.string().min(1, { message: "Usuario obligatorio" }),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
   captcha: z.string().min(1, "Debes responder el CAPTCHA"),
 })
