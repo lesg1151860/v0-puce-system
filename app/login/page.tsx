@@ -60,7 +60,7 @@ export default function LoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: data.email, 
+          username: data.username, 
           password: data.password,
         }),
       })
@@ -74,7 +74,7 @@ export default function LoginPage() {
         document.cookie = `refresh_token=${result.refresh}; path=/; max-age=604800; SameSite=Lax;`
         
         // 2. Extracción ultra-segura del rol (por si viene de Django o usamos el fallback del email)
-        const rawRole = result.role || result.rol || result.user?.role || result.user?.rol || (data.email.includes("admin") ? "ADMINISTRADOR" : "LIDER")
+        const rawRole = result.role || result.rol || result.user?.role || result.user?.rol || (data.username.includes("admin") ? "ADMINISTRADOR" : "LIDER")
         
         // Normalizar: quitar tildes, pasar a mayúsculas y remover espacios
         const userRole = String(rawRole)
@@ -139,15 +139,15 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Usuario</Label>
+              <Label htmlFor="username">Usuario</Label>
               <Input
-                id="email"
+                id="username"
                 type="text"
                 placeholder="Tu nombre de usuario"
-                {...register("email")}
-                className={errors.email ? "border-red-500" : ""}
+                {...register("username")}
+                className={errors.username ? "border-red-500" : ""}
               />
-              {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
+              {errors.username && <p className="text-sm text-red-500">{errors.username.message}</p>}
             </div>
 
             <div className="space-y-2">
