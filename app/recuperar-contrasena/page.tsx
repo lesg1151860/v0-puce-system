@@ -51,6 +51,7 @@ export default function RecuperarContrasenaPage() {
               alt="Logo PUCE"
               width={80}
               height={80}
+              priority
               className="rounded-full"
             />
           </div>
