@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   X,
+  Building2,
 } from "lucide-react"
 
 const navigation = [
@@ -26,6 +27,11 @@ const navigation = [
     name: "Gestionar Usuarios",
     href: "/admin/usuarios",
     icon: Users,
+  },
+  {
+    name: "Instituciones Educativas",
+    href: "/admin/instituciones",
+    icon: Building2,
   },
   {
     name: "Configuracion",
