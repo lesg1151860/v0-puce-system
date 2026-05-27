@@ -37,12 +37,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Plus, Pencil, Trash2, Building2, Search } from "lucide-react"
 
 // Tipo para Institucion Educativa
 interface InstitucionEducativa {
   id: number
   nombre: string
+  sector: "PUBLICA" | "PRIVADA"
 }
 
 // Clave para localStorage
@@ -75,6 +83,7 @@ export default function InstitucionesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingInstitucion, setEditingInstitucion] = useState<InstitucionEducativa | null>(null)
   const [formNombre, setFormNombre] = useState("")
+  const [formSector, setFormSector] = useState<"PUBLICA" | "PRIVADA">("PUBLICA")
   const [formError, setFormError] = useState("")
 
   // Estado para confirmacion de eliminacion
@@ -97,6 +106,7 @@ export default function InstitucionesPage() {
   const handleCreate = () => {
     setEditingInstitucion(null)
     setFormNombre("")
+    setFormSector("PUBLICA")
     setFormError("")
     setIsDialogOpen(true)
   }
@@ -105,6 +115,7 @@ export default function InstitucionesPage() {
   const handleEdit = (institucion: InstitucionEducativa) => {
     setEditingInstitucion(institucion)
     setFormNombre(institucion.nombre)
+    setFormSector(institucion.sector)
     setFormError("")
     setIsDialogOpen(true)
   }
@@ -132,7 +143,7 @@ export default function InstitucionesPage() {
       // Editar existente
       const updated = instituciones.map((inst) =>
         inst.id === editingInstitucion.id
-          ? { ...inst, nombre: formNombre.trim().toUpperCase() }
+          ? { ...inst, nombre: formNombre.trim().toUpperCase(), sector: formSector }
           : inst
       )
       setInstituciones(updated)
@@ -142,6 +153,7 @@ export default function InstitucionesPage() {
       const newInstitucion: InstitucionEducativa = {
         id: getNextId(),
         nombre: formNombre.trim().toUpperCase(),
+        sector: formSector,
       }
       const updated = [...instituciones, newInstitucion]
       setInstituciones(updated)
@@ -150,6 +162,7 @@ export default function InstitucionesPage() {
 
     setIsDialogOpen(false)
     setFormNombre("")
+    setFormSector("PUBLICA")
     setFormError("")
     setEditingInstitucion(null)
   }
@@ -208,6 +221,30 @@ export default function InstitucionesPage() {
             <p className="text-xs text-slate-500">Registradas en el sistema</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Sector Publico</CardTitle>
+            <Building2 className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {instituciones.filter((i) => i.sector === "PUBLICA").length}
+            </div>
+            <p className="text-xs text-slate-500">Instituciones publicas</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Sector Privado</CardTitle>
+            <Building2 className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {instituciones.filter((i) => i.sector === "PRIVADA").length}
+            </div>
+            <p className="text-xs text-slate-500">Instituciones privadas</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Tabla de instituciones */}
@@ -258,6 +295,7 @@ export default function InstitucionesPage() {
                   <TableRow>
                     <TableHead className="w-20">ID</TableHead>
                     <TableHead>Nombre Oficial</TableHead>
+                    <TableHead className="w-32">Sector</TableHead>
                     <TableHead className="w-32 text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -268,6 +306,17 @@ export default function InstitucionesPage() {
                         {institucion.id}
                       </TableCell>
                       <TableCell className="font-medium">{institucion.nombre}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            institucion.sector === "PUBLICA"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {institucion.sector}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
