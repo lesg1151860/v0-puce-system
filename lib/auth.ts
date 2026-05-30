@@ -1,23 +1,15 @@
 import { getAuthState, setAuthState, clearAuthState } from "./storage"
 import type { Usuario, RolUsuario } from "./types"
 
-// Usuarios predefinidos del sistema
-const USERS = [
-  {
-    email: "admin@puce.edu.co",
-    password: "admin123",
-    name: "Administrador PUCE",
-    rol: "ADMINISTRADOR" as RolUsuario,
-  },
-  {
-    email: "lider@puce.edu.co",
-    password: "lider123",
-    name: "Lider Convivencia",
-    rol: "LIDER" as RolUsuario,
-  },
-]
+// --- AYUDANTES DE COOKIES ---
+function getCookie(name: string): string | undefined {
+  if (typeof document === 'undefined') return undefined
+  const value = `; ${document.cookie}`
+  const parts = value.split(`; ${name}=`)
+  if (parts.length === 2) return parts.pop()?.split(';').shift()
+}
 
-// Función para generar CAPTCHA matemático
+// --- GENERADOR CAPTCHA ---
 export function generateCaptcha(): { question: string; answer: number } {
   const num1 = Math.floor(Math.random() * 10) + 1
   const num2 = Math.floor(Math.random() * 10) + 1
@@ -33,14 +25,12 @@ export function generateCaptcha(): { question: string; answer: number } {
       question = `¿Cuánto es ${num1} + ${num2}?`
       break
     case "-":
-      // Asegurar que el resultado sea positivo
       const a = Math.max(num1, num2)
       const b = Math.min(num1, num2)
       answer = a - b
       question = `¿Cuánto es ${a} - ${b}?`
       break
     case "*":
-      // Usar números más pequeños para multiplicación
       const m1 = Math.floor(Math.random() * 5) + 1
       const m2 = Math.floor(Math.random() * 5) + 1
       answer = m1 * m2
@@ -50,90 +40,68 @@ export function generateCaptcha(): { question: string; answer: number } {
       answer = num1 + num2
       question = `¿Cuánto es ${num1} + ${num2}?`
   }
-
   return { question, answer }
 }
 
-// Función para validar el CAPTCHA
 export function validateCaptcha(userAnswer: string, correctAnswer: number): boolean {
   const parsed = parseInt(userAnswer, 10)
   return !isNaN(parsed) && parsed === correctAnswer
 }
 
-// Función de login
-export function login(
-  email: string,
-  password: string
-): { success: boolean; user?: Usuario; error?: string } {
-  // Buscar usuario que coincida con las credenciales
-  const foundUser = USERS.find(
-    (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-  )
+// --- AUTHENTICACIÓN ---
 
-  if (foundUser) {
-    const user: Usuario = {
-      email: foundUser.email,
-      name: foundUser.name,
-      rol: foundUser.rol,
-    }
-    setAuthState({ isAuthenticated: true, user })
-    return { success: true, user }
-  }
-
-  return { success: false, error: "Credenciales invalidas" }
+export function isAuthenticated(): boolean {
+  // Primero revisamos la cookie. Si existe, estamos autenticados.
+  const token = getCookie("access_token")
+  if (token) return true
+  
+  // Si no hay cookie, revisamos el estado local (por si usas el login viejo)
+  return getAuthState().isAuthenticated
 }
 
-// Función de logout
 export function logout(): void {
+  // Borrar cookies
+  document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;"
+  document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;"
+  document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;"
+  
   clearAuthState()
 }
 
-// Verificar si el usuario está autenticado
-export function isAuthenticated(): boolean {
-  const state = getAuthState()
-  return state.isAuthenticated
+export function isAdmin(): boolean {
+  // Verificamos cookie de rol
+  const role = getCookie("user_role")
+  if (role) return role === "ADMINISTRADOR"
+  
+  // Fallback a estado local
+  return getAuthState().user?.rol === "ADMINISTRADOR"
 }
 
-// Obtener usuario actual
+export function isLider(): boolean {
+  const role = getCookie("user_role")
+  if (role) return role === "LIDER"
+  
+  return getAuthState().user?.rol === "LIDER"
+}
+
 export function getCurrentUser(): Usuario | null {
   const state = getAuthState()
   return state.user
 }
 
-// Simular envío de email para recuperación de contraseña
-export function requestPasswordReset(email: string): { success: boolean; message: string } {
-  // Verificar si el email corresponde a algun usuario
-  const userExists = USERS.some((u) => u.email.toLowerCase() === email.toLowerCase())
-  
-  if (userExists) {
-    return {
-      success: true,
-      message:
-        "Si el correo esta registrado, recibiras instrucciones para restablecer tu contrasena.",
-    }
-  }
-
-  return {
-    success: true,
-    message:
-      "Si el correo esta registrado, recibiras instrucciones para restablecer tu contrasena.",
-  }
-}
-
-// Verificar si el usuario es administrador
-export function isAdmin(): boolean {
-  const state = getAuthState()
-  return state.user?.rol === "ADMINISTRADOR"
-}
-
-// Verificar si el usuario es líder
-export function isLider(): boolean {
-  const state = getAuthState()
-  return state.user?.rol === "LIDER"
-}
-
-// Obtener el rol del usuario actual
 export function getCurrentUserRole(): RolUsuario | null {
-  const state = getAuthState()
-  return state.user?.rol || null
+  const role = getCookie("user_role") as RolUsuario
+  if (role) return role
+  
+  return getAuthState().user?.rol || null
+}
+
+// Función de login (Solo necesaria si usas autenticación local antigua)
+export function login(email: string, password: string): { success: boolean; user?: Usuario; error?: string } {
+  // ... (Tu lógica anterior de usuarios de ejemplo)
+  return { success: false, error: "Credenciales invalidas" }
+}
+
+export function requestPasswordReset(email: string): { success: boolean; message: string } {
+  return { success: true, message: "Si el correo esta registrado, recibiras instrucciones." }
 }

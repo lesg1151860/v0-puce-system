@@ -95,7 +95,7 @@ export default function NuevoCasoSACPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/sac">
+        <Link href="/lider/sac">
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -206,7 +206,7 @@ export default function NuevoCasoSACPage() {
             </div>
 
             <div className="flex justify-end gap-4 pt-4 border-t">
-              <Link href="/sac">
+              <Link href="/lider/sac">
                 <Button type="button" variant="outline">
                   Cancelar
                 </Button>
