@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
@@ -17,6 +18,8 @@ import { loginSchema, type LoginFormData } from "@/lib/validations"
 import { generateCaptcha, validateCaptcha } from "@/lib/auth"
 
 export default function LoginPage() {
+  const router = useRouter() // Hook declarado correctamente dentro del componente
+
   const [showPassword, setShowPassword] = useState(false)
   const [captcha, setCaptcha] = useState({ question: "", answer: 0 })
   const [error, setError] = useState("")
@@ -31,7 +34,6 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   })
 
-  // Generamos el CAPTCHA al cargar, sin verificaciones de sesión aquí para evitar bucles
   useEffect(() => {
     refreshCaptcha()
   }, [])
@@ -43,6 +45,7 @@ export default function LoginPage() {
   }
 
   const onSubmit = async (data: LoginFormData) => {
+    console.log("-> Iniciando proceso de login...")
     setError("")
     setIsLoading(true)
 
@@ -56,55 +59,46 @@ export default function LoginPage() {
     try {
       const response = await fetch("http://127.0.0.1:8000/api/auth/login/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: data.username, 
+          username: data.username,
           password: data.password,
         }),
       })
 
       const result = await response.json()
-      console.log("JSON completo recibido de Django:", result) // Diagnóstico para ver F12
+      console.log("-> Respuesta del servidor:", result)
 
       if (response.ok) {
-        // 1. Guardar los tokens en cookies con rutas explícitas
+        // Guardar tokens y rol en cookies
         document.cookie = `access_token=${result.access}; path=/; max-age=86400; SameSite=Lax;`
         document.cookie = `refresh_token=${result.refresh}; path=/; max-age=604800; SameSite=Lax;`
-        
-        // 2. Extracción ultra-segura del rol (por si viene de Django o usamos el fallback del email)
-        const rawRole = result.role || result.rol || result.user?.role || result.user?.rol || (data.username.includes("admin") ? "ADMINISTRADOR" : "LIDER")
-        
-        // Normalizar: quitar tildes, pasar a mayúsculas y remover espacios
-        const userRole = String(rawRole)
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toUpperCase()
-          .trim()
 
-        // Guardamos el rol limpio en la cookie
-        document.cookie = `user_role=${userRole}; path=/; max-age=86400; SameSite=Lax;`
-        
-        // 3. Redirección limpia (Hard Navigation) condicionada por el rol
-        if (userRole === "LIDER") {
-          window.location.replace("/lider")
-        } else if (userRole === "ADMINISTRADOR") {
-          window.location.replace("/admin")
+        const rawRole = result.role || result.rol || result.user?.role || result.user?.rol || ""
+        const finalRole = (rawRole || (data.username.toLowerCase().includes("admin") ? "ADMINISTRADOR" : "LIDER")).toUpperCase()
+
+        console.log("-> Rol final detectado:", finalRole)
+        document.cookie = `user_role=${finalRole}; path=/; max-age=86400; SameSite=Lax;`
+
+        // Redirección usando router.push de next/navigation
+        console.log("-> Intentando navegar a:", finalRole);
+
+        if (finalRole.includes("LIDER")) {
+          window.location.href = "/lider"; // Fuerza navegación clásica
+        } else if (finalRole.includes("ADMINISTRADOR")) {
+          window.location.href = "/administrador"; // Fuerza navegación clásica
         } else {
-          setError(`El servidor devolvió un rol no configurado: "${rawRole}"`)
+          setError(`Error: Rol "${finalRole}" no configurado.`)
           setIsLoading(false)
-          return
         }
       } else {
         setError("Usuario o contraseña incorrectos")
         refreshCaptcha()
+        setIsLoading(false)
       }
     } catch (err) {
-      console.error("Error conectando con el servidor:", err)
-      setError("Error de conexión con el servidor backend")
-      refreshCaptcha()
-    } finally {
+      console.error("-> Error de conexión:", err)
+      setError("Error de conexión con el backend.")
       setIsLoading(false)
     }
   }
@@ -125,9 +119,7 @@ export default function LoginPage() {
           </div>
           <div>
             <CardTitle className="text-2xl font-bold text-slate-900">PUCE</CardTitle>
-            <CardDescription className="text-slate-600">
-              Plataforma Unificada de Convivencia Escolar
-            </CardDescription>
+            <CardDescription>Plataforma Unificada de Convivencia Escolar</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -140,13 +132,7 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <Label htmlFor="username">Usuario</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Tu nombre de usuario"
-                {...register("username")}
-                className={errors.username ? "border-red-500" : ""}
-              />
+              <Input id="username" type="text" placeholder="Tu usuario" {...register("username")} />
               {errors.username && <p className="text-sm text-red-500">{errors.username.message}</p>}
             </div>
 
@@ -158,71 +144,32 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Tu contraseña"
                   {...register("password")}
-                  className={errors.password ? "border-red-500 pr-10" : "pr-10"}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="captcha">Verificación de Seguridad</Label>
-              <div className="flex items-center gap-2 rounded-lg bg-slate-100 p-3">
-                <span className="flex-1 text-sm font-medium text-slate-700">{captcha.question}</span>
-                <button
-                  type="button"
-                  onClick={refreshCaptcha}
-                  className="text-slate-500 hover:text-slate-700"
-                  title="Generar nueva pregunta"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </button>
-              </div>
-              <Input
-                id="captcha"
-                type="text"
-                placeholder="Tu respuesta"
-                {...register("captcha")}
-                className={errors.captcha ? "border-red-500" : ""}
-              />
-              {errors.captcha && <p className="text-sm text-red-500">{errors.captcha.message}</p>}
+              <Label htmlFor="captcha">{captcha.question}</Label>
+              <Input id="captcha" type="text" placeholder="Respuesta" {...register("captcha")} />
             </div>
 
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Iniciando sesión...
+                  <Loader2 className="mr-2 animate-spin" /> Accediendo...
                 </>
               ) : (
                 "Iniciar Sesión"
               )}
             </Button>
-
-            <div className="text-center">
-              <Link
-                href="/recuperar-contrasena"
-                className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
-            </div>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <p className="text-xs text-center text-slate-500 mb-2">
-              Credenciales requeridas:
-            </p>
-            <p className="text-xs text-center text-slate-500">
-              Usa un usuario registrado en tu base de datos de Django
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
