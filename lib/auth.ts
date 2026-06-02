@@ -1,7 +1,7 @@
 import { getAuthState, setAuthState, clearAuthState } from "./storage"
 import type { Usuario, RolUsuario } from "./types"
 
-// --- AYUDANTES DE COOKIES ---
+// --- Función para obtener el valor de una cookie ---
 function getCookie(name: string): string | undefined {
   if (typeof document === 'undefined') return undefined
   const value = `; ${document.cookie}`
@@ -9,7 +9,7 @@ function getCookie(name: string): string | undefined {
   if (parts.length === 2) return parts.pop()?.split(';').shift()
 }
 
-// --- GENERADOR CAPTCHA ---
+// --- Función para generar un captcha ---
 export function generateCaptcha(): { question: string; answer: number } {
   const num1 = Math.floor(Math.random() * 10) + 1
   const num2 = Math.floor(Math.random() * 10) + 1
@@ -48,60 +48,66 @@ export function validateCaptcha(userAnswer: string, correctAnswer: number): bool
   return !isNaN(parsed) && parsed === correctAnswer
 }
 
-// --- AUTHENTICACIÓN ---
-
+// --- Funciones de autenticación ---
 export function isAuthenticated(): boolean {
   // Primero revisamos la cookie. Si existe, estamos autenticados.
   const token = getCookie("access_token")
   if (token) return true
-  
-  // Si no hay cookie, revisamos el estado local (por si usas el login viejo)
   return getAuthState().isAuthenticated
 }
 
+// --- Función para cerrar sesión ---
 export function logout(): void {
-  // Borrar cookies
   document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;"
   document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;"
   document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;"
-  
+  document.cookie = "user_name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;"
   clearAuthState()
 }
 
+// --- Funciones para verificar rol de Administrador ---
 export function isAdmin(): boolean {
   // Verificamos cookie de rol
   const role = getCookie("user_role")
   if (role) return role === "ADMINISTRADOR"
-  
-  // Fallback a estado local
   return getAuthState().user?.rol === "ADMINISTRADOR"
 }
 
+// --- Funciones para verificar rol de Líder ---
 export function isLider(): boolean {
   const role = getCookie("user_role")
   if (role) return role === "LIDER"
-  
   return getAuthState().user?.rol === "LIDER"
 }
 
+// --- Función para obtener el usuario actual ---
 export function getCurrentUser(): Usuario | null {
   const state = getAuthState()
-  return state.user
+  
+  if (state.user) return state.user
+  
+  const name = getCookie("user_name")
+  const role = getCookie("user_role") as RolUsuario
+  
+  if (name && role) {
+    return {
+      id: 0,
+      nombre: name,
+      email: "",
+      rol: role,
+    }
+  }
+  return null
 }
 
+// --- Función para obtener el rol del usuario actual ---
 export function getCurrentUserRole(): RolUsuario | null {
   const role = getCookie("user_role") as RolUsuario
   if (role) return role
-  
   return getAuthState().user?.rol || null
 }
 
-// Función de login (Solo necesaria si usas autenticación local antigua)
-export function login(email: string, password: string): { success: boolean; user?: Usuario; error?: string } {
-  // ... (Tu lógica anterior de usuarios de ejemplo)
-  return { success: false, error: "Credenciales invalidas" }
-}
-
+// --- Función para solicitar restablecimiento de contraseña ---
 export function requestPasswordReset(email: string): { success: boolean; message: string } {
   return { success: true, message: "Si el correo esta registrado, recibiras instrucciones." }
 }
