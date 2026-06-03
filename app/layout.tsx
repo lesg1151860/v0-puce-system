@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
+import { Toaster } from 'react-hot-toast' // <-- 1. Agregamos esta importación
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -38,7 +38,10 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans antialiased">
         {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        
+        {/* <-- 2. Añadimos el Toaster de forma global --> */}
+        <Toaster position="top-right" reverseOrder={false} />
+        
       </body>
     </html>
   )
