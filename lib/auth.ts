@@ -53,15 +53,18 @@ export function isAuthenticated(): boolean {
   // Primero revisamos la cookie. Si existe, estamos autenticados.
   const token = getCookie("access_token")
   if (token) return true
+  
+  // Si no hay cookie, revisamos el estado local (por si usas el login viejo)
   return getAuthState().isAuthenticated
 }
 
 // --- Función para cerrar sesión ---
 export function logout(): void {
+  // Borrar cookies
   document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;"
   document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;"
   document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;"
-  document.cookie = "user_name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;"
+  
   clearAuthState()
 }
 
@@ -73,7 +76,6 @@ export function isAdmin(): boolean {
   return getAuthState().user?.rol === "ADMINISTRADOR"
 }
 
-// --- Funciones para verificar rol de Líder ---
 export function isLider(): boolean {
   const role = getCookie("user_role")
   if (role) return role === "LIDER"
