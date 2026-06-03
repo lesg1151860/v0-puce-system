@@ -6,7 +6,7 @@ import { useState } from "react"
 import Image from "next/image"
 import { 
   LogOut, Menu, X, LayoutDashboard, FileText, 
-  FileSpreadsheet, ShieldCheck, Users, Settings 
+  FileSpreadsheet, ShieldCheck, Users, Settings, Building 
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -16,14 +16,15 @@ import { Button } from "@/components/ui/button"
 const liderLinks = [
   { name: "Dashboard", href: "/lider", icon: LayoutDashboard },
   { name: "SAC", href: "/lider/sac", icon: FileText, description: "Sistema de Atención al Ciudadano" },
-  { name: "SIUCE", href: "/lider/siuce", icon: ShieldCheck, description: "Información de Convivencia" },
+  { name: "SIUCE", href: "/lider/siuce", icon: FileText, description: "Sistema de Información Unificado de Convivencia Escolar" },
   { name: "Reportes", href: "/lider/reportes", icon: FileSpreadsheet, description: "Generación de Reportes Excel" },
 ]
 
 const adminLinks = [
-  { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { name: "Usuarios", href: "/admin/usuarios", icon: Users, description: "Gestión de cuentas y roles" },
-  { name: "Configuración", href: "/admin/configuracion", icon: Settings, description: "Ajustes globales del sistema" },
+  { name: "Dashboard", href: "/administrador", icon: LayoutDashboard },
+  { name: "Usuarios", href: "/administrador/usuarios", icon: Users, description: "Gestión de usuarios y permisos" },
+  {name: "Instituciones", href: "/administrador/instituciones", icon: Building, description: "Gestión de Instituciones Educativas" },
+  { name: "Configuración", href: "/administrador/configuracion", icon: Settings, description: "Ajustes globales del sistema" },
 ]
 
 // El Sidebar ahora solo recibe una palabra: "lider" o "admin"
@@ -46,8 +47,13 @@ export function Sidebar({ type }: SidebarProps) {
   }
 
   const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(`${href}/`)
-  }
+  // 1. Si el link es el Dashboard (la raíz), solo debe estar activo si es coincidencia exacta
+    if (href === "/lider" || href === "/administrador") {
+      return pathname === href;
+    }
+    // 2. Para los demás módulos, mantenemos la lógica de sub-rutas
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   const SidebarContent = () => (
     <>
@@ -75,21 +81,28 @@ export function Sidebar({ type }: SidebarProps) {
               onClick={() => setMobileMenuOpen(false)}
               className={cn(
                 "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                // Si está activo, usamos azul sólido. Si no, al hacer hover usamos azul sólido
                 active
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                  ? "bg-blue-600 text-white" 
+                  : "text-slate-700 hover:bg-blue-600 hover:text-white"
               )}
             >
               <item.icon
                 className={cn(
-                  "h-5 w-5 shrink-0",
-                  active ? "text-blue-600" : "text-slate-500 group-hover:text-slate-700"
+                  "h-5 w-5 shrink-0 transition-colors",
+                  // Los iconos también cambian a blanco cuando el fondo es azul
+                  active ? "text-white" : "text-slate-500 group-hover:text-white"
                 )}
               />
               <div className="flex flex-col">
                 <span>{item.name}</span>
                 {item.description && (
-                  <span className="text-xs font-normal text-slate-500">{item.description}</span>
+                  <span className={cn(
+                    "text-xs font-normal transition-colors",
+                    active ? "text-blue-100" : "text-slate-500 group-hover:text-blue-100"
+                  )}>
+                    {item.description}
+                  </span>
                 )}
               </div>
             </Link>
