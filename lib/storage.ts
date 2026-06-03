@@ -1,4 +1,4 @@
-import type { CasoSAC, CasoSIUCE, DashboardStats, AuthState } from "./types"
+import type { CasoSAC, CasoSIUCE, DashboardStats, AuthState, Usuario } from "./types"
 
 // Claves de localStorage
 const STORAGE_KEYS = {
@@ -18,7 +18,6 @@ export function getCurrentDate(): string {
 }
 
 // ============== AUTENTICACIÓN ==============
-
 export function getAuthState(): AuthState {
   if (typeof window === "undefined") {
     return { isAuthenticated: false, user: null }
@@ -41,7 +40,6 @@ export function clearAuthState(): void {
 }
 
 // ============== CASOS SAC ==============
-
 export function getCasesSAC(): CasoSAC[] {
   if (typeof window === "undefined") return []
   const stored = localStorage.getItem(STORAGE_KEYS.CASES_SAC)
@@ -56,19 +54,19 @@ export function getCaseSAC(id: string): CasoSAC | undefined {
   return cases.find((c) => c.id === id)
 }
 
-// Validar si un radicado SAC ya existe (excluye el caso con excludeId si se proporciona)
+// Validar si un radicado SAC ya existe
 export function isRadicadoSACDuplicado(radicado: string, excludeId?: string): boolean {
   const cases = getCasesSAC()
   return cases.some((c) => c.radicado === radicado && c.id !== excludeId)
 }
 
-// Validar si un radicado SIUCE ya existe (excluye el caso con excludeId si se proporciona)
+// Validar si un radicado SIUCE ya existe
 export function isRadicadoSIUCEDuplicado(radicado: string, excludeId?: string): boolean {
   const cases = getCasesSIUCE()
   return cases.some((c) => c.radicado === radicado && c.id !== excludeId)
 }
 
-// Validar si un número de identificación SIUCE ya existe (excluye el caso con excludeId si se proporciona)
+// Validar si un número de identificación SIUCE ya existe
 export function isIdentificacionSIUCEDuplicada(numeroIdentificacion: string, excludeId?: string): boolean {
   const cases = getCasesSIUCE()
   return cases.some((c) => c.numeroIdentificacion === numeroIdentificacion && c.id !== excludeId)
@@ -134,7 +132,6 @@ export function deleteCaseSAC(id: string): boolean {
 }
 
 // ============== CASOS SIUCE ==============
-
 export function getCasesSIUCE(): CasoSIUCE[] {
   if (typeof window === "undefined") return []
   const stored = localStorage.getItem(STORAGE_KEYS.CASES_SIUCE)
@@ -185,23 +182,22 @@ export function deleteCaseSIUCE(id: string): boolean {
 }
 
 // ============== ESTADÍSTICAS ==============
-
 export function getDashboardStats(): DashboardStats {
   const casesSAC = getCasesSAC()
   const casesSIUCE = getCasesSIUCE()
 
-  // Contar estados de SAC (EN SEGUIMIENTO, TERMINADO)
-  const sacEnSeguimiento = casesSAC.filter((c) => c.estado === "EN SEGUIMIENTO").length
-  const sacResueltos = casesSAC.filter((c) => c.estado === "TERMINADO").length
+  // Contar estados de SAC
+  const sacEnSeguimiento = casesSAC.filter((c) => c.estado === "En Seguimiento").length
+  const sacResueltos = casesSAC.filter((c) => c.estado === "Terminado").length
 
-  // Contar estados de SIUCE (PENDIENTE, EN PROGRESO, TERMINADO)
-  const siuceNuevos = casesSIUCE.filter((c) => c.estado === "PENDIENTE").length
-  const siuceEnSeguimiento = casesSIUCE.filter((c) => c.estado === "EN PROGRESO").length
-  const siuceResueltos = casesSIUCE.filter((c) => c.estado === "TERMINADO").length
+  // Contar estados de SIUCE
+  const siuceNuevos = casesSIUCE.filter((c) => c.estado === "Pendiente").length
+  const siuceEnSeguimiento = casesSIUCE.filter((c) => c.estado === "En Progreso").length
+  const siuceResueltos = casesSIUCE.filter((c) => c.estado === "Terminado").length
 
   return {
     totalCasos: casesSAC.length + casesSIUCE.length,
-    casosNuevos: siuceNuevos, // Solo SIUCE tiene estado PENDIENTE como "nuevo"
+    casosNuevos: siuceNuevos,
     casosEnSeguimiento: sacEnSeguimiento + siuceEnSeguimiento,
     casosResueltos: sacResueltos + siuceResueltos,
     casosSAC: casesSAC.length,
@@ -241,10 +237,10 @@ export function getAccionesSEMStats(): { accion: string; cantidad: number }[] {
     .sort((a, b) => b.cantidad - a.cantidad)
 }
 
-// Obtener casos SAC sin respuesta al ciudadano (para notificaciones)
+// Obtener casos SAC sin respuesta al ciudadano
 export function getCasosSACSinRespuesta(): CasoSAC[] {
   const cases = getCasesSAC()
-  return cases.filter((c) => !c.respondido && c.estado === "EN SEGUIMIENTO")
+  return cases.filter((c) => !c.respondido && c.estado === "En Seguimiento")
 }
 
 // Obtener instituciones educativas únicas
@@ -269,148 +265,29 @@ export function getInstitucionesEducativas(): string[] {
   return Array.from(instituciones).sort()
 }
 
-// ============== DATOS DE DEMOSTRACIÓN ==============
+const STORAGE_KEY_USUARIOS = "puce_usuarios"
+const STORAGE_KEY_INSTITUCIONES = "puce_instituciones_educativas"
 
-export function seedDemoData(): void {
+// --- FUNCIONES PARA USUARIOS ---
+export function getUsuarios(): Usuario[] {
+  if (typeof window === "undefined") return []
+  
+  const data = localStorage.getItem(STORAGE_KEY_USUARIOS)
+  return data ? JSON.parse(data) : []
+}
+
+export function saveUsuarios(usuarios: Usuario[]): void {
+  if (typeof window === "undefined") return 
+  localStorage.setItem(STORAGE_KEY_USUARIOS, JSON.stringify(usuarios))
+}
+
+export function getInstituciones() {
+  if (typeof window === "undefined") return []
+  const data = localStorage.getItem(STORAGE_KEY_INSTITUCIONES)
+  return data ? JSON.parse(data) : []
+}
+
+export function saveInstituciones(instituciones: any[]): void {
   if (typeof window === "undefined") return
-
-  // Solo sembrar datos si no existen
-  const existingSAC = getCasesSAC()
-  const existingSIUCE = getCasesSIUCE()
-
-  if (existingSAC.length === 0) {
-    const demoSAC: Omit<CasoSAC, "id" | "createdAt" | "updatedAt">[] = [
-      {
-        radicado: "CUC2024ER002434",
-        ciudadano: "MARÍA GARCÍA LÓPEZ",
-        fechaRadicacion: "2024-01-15",
-        rol: "Padre de Familia",
-        estado: "TERMINADO",
-        estudiante: "JUAN GARCÍA",
-        situacion: "Tipo 2",
-        sacRespuesta: "SÍ",
-        trasladoIE: true,
-        institucionContraQuienSeDirige: "I.E. Simón Bolívar",
-        respondido: true,
-        contestacionIE: true,
-      },
-      {
-        radicado: "CUC2024ER002435",
-        ciudadano: "CARLOS RODRÍGUEZ",
-        fechaRadicacion: "2024-02-20",
-        rol: "Docente",
-        estado: "EN SEGUIMIENTO",
-        situacion: "Tipo 1",
-        sacRespuesta: "NO",
-        trasladoIE: true,
-        institucionContraQuienSeDirige: "I.E. Antonio Nariño",
-      },
-      {
-        radicado: "CUC2024ER002436",
-        ciudadano: "ANA MARTÍNEZ",
-        fechaRadicacion: "2024-03-10",
-        rol: "Estudiante",
-        estado: "EN SEGUIMIENTO",
-      },
-    ]
-
-    demoSAC.forEach((data) => createCaseSAC(data))
-  }
-
-  if (existingSIUCE.length === 0) {
-    const demoSIUCE: Omit<CasoSIUCE, "id" | "createdAt" | "updatedAt">[] = [
-      {
-        radicado: "35024",
-        avanceGeneral: 75,
-        estado: "EN PROGRESO",
-        ie: "I.E. Simón Bolívar",
-        victima: "PEDRO SÁNCHEZ MORALES",
-        tipoIdentificacion: "TI",
-        numeroIdentificacion: "1092537583",
-        grado: "Octavo",
-        danoPrincipal: "Psicológico",
-        tipoAgresion: "Agresión Verbal",
-        repetitivo: true,
-        eventoGenerador: "Discriminación",
-        rolAgresor: "Estudiante",
-        nombreAgresor: "CARLOS PÉREZ",
-        clasificacion: "Tipo 2",
-        lugar: "Colegio",
-        fechaOcurrencia: "2024-01-10",
-        fechaRegistro: "2024-01-12",
-        seguimientoIE: true,
-        numeroSeguimientoIE: 3,
-        seguimientoPolicia: false,
-        numeroSeguimientoPolicia: 0,
-        cec: true,
-        accionesIE: "Seguimiento a la ruta",
-        avanceIE: 75,
-        accionesSEM: "No se radicó",
-        avanceSEM: 0,
-        descripcionAvance: "Se han realizado reuniones con padres de familia",
-      },
-      {
-        radicado: "35025",
-        avanceGeneral: 100,
-        estado: "TERMINADO",
-        ie: "I.E. Antonio Nariño",
-        victima: "LAURA GÓMEZ RUIZ",
-        tipoIdentificacion: "RC",
-        numeroIdentificacion: "1234567890",
-        grado: "Quinto",
-        danoPrincipal: "Físico",
-        tipoAgresion: "Agresión física grave",
-        repetitivo: false,
-        eventoGenerador: "Conflicto",
-        rolAgresor: "Estudiante",
-        nombreAgresor: "MIGUEL TORRES",
-        clasificacion: "Tipo 2",
-        lugar: "Colegio",
-        fechaOcurrencia: "2024-02-05",
-        fechaRegistro: "2024-02-06",
-        seguimientoIE: true,
-        numeroSeguimientoIE: 2,
-        seguimientoPolicia: false,
-        numeroSeguimientoPolicia: 0,
-        cec: false,
-        accionesIE: "Solución del caso",
-        avanceIE: 100,
-        accionesSEM: "Archivo de la diligencia",
-        avanceSEM: 100,
-        descripcionAvance: "Caso cerrado satisfactoriamente",
-      },
-      {
-        radicado: "35026",
-        avanceGeneral: 14,
-        estado: "EN PROGRESO",
-        ie: "I.E. Francisco de Paula Santander",
-        victima: "SOFÍA HERRERA CASTRO",
-        tipoIdentificacion: "TI",
-        numeroIdentificacion: "9876543210",
-        grado: "Décimo",
-        danoPrincipal: "Psicológico",
-        danoSecundario: "Económico",
-        tipoAgresion: "Agresión electrónica",
-        repetitivo: true,
-        eventoGenerador: "Discriminación",
-        rolAgresor: "Estudiante",
-        nombreAgresor: "GRUPO DE ESTUDIANTES",
-        clasificacion: "Tipo 2",
-        lugar: "Redes Sociales",
-        fechaOcurrencia: "2024-03-01",
-        fechaRegistro: "2024-03-05",
-        seguimientoIE: false,
-        numeroSeguimientoIE: 0,
-        seguimientoPolicia: false,
-        numeroSeguimientoPolicia: 0,
-        cec: false,
-        accionesIE: "Sin acciones",
-        avanceIE: 0,
-        accionesSEM: "Radicación",
-        avanceSEM: 14.3,
-      },
-    ]
-
-    demoSIUCE.forEach((data) => createCaseSIUCE(data))
-  }
+  localStorage.setItem(STORAGE_KEY_INSTITUCIONES, JSON.stringify(instituciones))
 }

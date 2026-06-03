@@ -53,8 +53,6 @@ export function isAuthenticated(): boolean {
   // Primero revisamos la cookie. Si existe, estamos autenticados.
   const token = getCookie("access_token")
   if (token) return true
-  
-  // Si no hay cookie, revisamos el estado local (por si usas el login viejo)
   return getAuthState().isAuthenticated
 }
 
@@ -70,22 +68,21 @@ export function logout(): void {
 
 // --- Funciones para verificar rol de Administrador ---
 export function isAdmin(): boolean {
-  // Verificamos cookie de rol
   const role = getCookie("user_role")
   if (role) return role === "ADMINISTRADOR"
   return getAuthState().user?.rol === "ADMINISTRADOR"
 }
 
+// --- Funciones para verificar rol de Lider ---
 export function isLider(): boolean {
   const role = getCookie("user_role")
   if (role) return role === "LIDER"
   return getAuthState().user?.rol === "LIDER"
 }
 
-// --- Función para obtener el usuario actual ---
 export function getCurrentUser(): Usuario | null {
   const state = getAuthState()
-  
+
   if (state.user) return state.user
   
   const name = getCookie("user_name")
@@ -99,17 +96,17 @@ export function getCurrentUser(): Usuario | null {
       rol: role,
     }
   }
+  
   return null
 }
 
-// --- Función para obtener el rol del usuario actual ---
 export function getCurrentUserRole(): RolUsuario | null {
   const role = getCookie("user_role") as RolUsuario
   if (role) return role
+  
   return getAuthState().user?.rol || null
 }
 
-// --- Función para solicitar restablecimiento de contraseña ---
 export function requestPasswordReset(email: string): { success: boolean; message: string } {
   return { success: true, message: "Si el correo esta registrado, recibiras instrucciones." }
 }
