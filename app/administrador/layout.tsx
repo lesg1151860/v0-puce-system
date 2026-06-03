@@ -1,23 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, usePathname } from "next/navigation"
-import { isAuthenticated, isAdmin, logout } from "@/lib/auth"
-import {
-  LayoutDashboard,
-  Users,
-  Settings,
-  LogOut,
-  Building2,
-} from "lucide-react"
-
-// Rutas actualizadas para coincidir con tu carpeta "administrador"
-const navigation = [
-  { name: "Dashboard", href: "/administrador", icon: LayoutDashboard },
-  { name: "Gestionar Usuarios", href: "/administrador/usuarios", icon: Users },
-  { name: "Instituciones", href: "/administrador/instituciones", icon: Building2 },
-  { name: "Configuración", href: "/administrador/configuracion", icon: Settings },
-]
+import { useRouter } from "next/navigation"
+import { isAuthenticated, isAdmin } from "@/lib/auth"
+import { Sidebar } from "@/components/dashboard/sidebar" // 1. Importamos el componente unificado
 
 export default function AdminLayout({
   children,
@@ -25,11 +11,10 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const pathname = usePathname()
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // 1. Verificación de autenticación al cargar el layout
+    // Verificación de autenticación al cargar el layout
     const checkAccess = () => {
       // Si no está autenticado o no es admin, enviamos al login
       if (!isAuthenticated() || !isAdmin()) {
@@ -37,17 +22,11 @@ export default function AdminLayout({
         router.push("/login")
         return
       }
-      // Si todo está bien, permitimos que cargue
       setIsLoading(false)
     }
 
     checkAccess()
   }, [router])
-
-  const handleLogout = () => {
-    logout()
-    router.push("/login")
-  }
 
   // Pantalla de carga para evitar parpadeos
   if (isLoading) {
@@ -63,34 +42,9 @@ export default function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      {/* Sidebar Lateral */}
-      <aside className="w-64 bg-white border-r fixed inset-y-0 left-0 hidden lg:block">
-        <div className="p-6 font-bold text-xl text-blue-900">PUCE Admin</div>
-        <nav className="mt-6 px-4 space-y-2">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href
-            return (
-              <a
-                key={item.name}
-                href={item.href}
-                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                  isActive ? "bg-blue-100 text-blue-700" : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                {item.name}
-              </a>
-            )
-          })}
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 p-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-10"
-          >
-            <LogOut className="w-5 h-5" />
-            Cerrar Sesión
-          </button>
-        </nav>
-      </aside>
+      {/* 2. AQUÍ USAMOS EL COMPONENTE REUTILIZABLE */}
+      {/* Al pasarle type="admin", el componente cargará automáticamente los enlaces de administración */}
+      <Sidebar type="admin" />
       
       {/* Contenido Principal */}
       <main className="flex-1 lg:pl-64">
