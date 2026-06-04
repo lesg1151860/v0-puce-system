@@ -10,7 +10,6 @@ import toast from "react-hot-toast"
 export default function DashboardAdmin() {
   const [usuarios, setUsuarios] = useState<any[]>([])
   const [instituciones, setInstituciones] = useState<any[]>([])
-  const [usuarioActual, setUsuarioActual] = useState<any>(null) // Nuevo estado
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
