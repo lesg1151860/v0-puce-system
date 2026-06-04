@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Search, Shield, UserCheck, Users, Edit2, Trash2 } from "lucide-react"
+import { Plus, Search, Shield, UserCheck, Users, Edit2, Trash2, AlertTriangle } from "lucide-react"
 import { api } from "@/lib/api"
 import toast from "react-hot-toast"
 
@@ -13,6 +13,9 @@ export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [usuarioAEliminar, setUsuarioAEliminar] = useState<number | null>(null)
 
   const fetchUsuarios = async () => {
     try {
@@ -29,16 +32,29 @@ export default function UsuariosPage() {
     fetchUsuarios()
   }, [])
 
-  const handleDelete = async (id: number) => {
-    if (confirm("¿Estás seguro de eliminar este usuario?")) {
-      try {
-        await api.eliminarUsuario(id)
-        fetchUsuarios() 
-        toast.success("Usuario eliminado exitosamente.")
-      } catch (error) {
-        toast.error("Error al eliminar el usuario")
-      }
+  const handleClickEliminar = (id: number) => {
+    setUsuarioAEliminar(id)
+    setIsDeleteModalOpen(true)
+  }
+
+  const confirmarEliminacion = async () => {
+    if (usuarioAEliminar === null) return
+
+    try {
+      await api.eliminarUsuario(usuarioAEliminar)
+      fetchUsuarios() 
+      toast.success("Usuario eliminado exitosamente.")
+    } catch (error) {
+      toast.error("Error al eliminar el usuario")
+    } finally {
+      setIsDeleteModalOpen(false)
+      setUsuarioAEliminar(null)
     }
+  }
+
+  const cancelarEliminacion = () => {
+    setIsDeleteModalOpen(false)
+    setUsuarioAEliminar(null)
   }
 
   const totalUsuarios = usuarios.length
@@ -52,14 +68,14 @@ export default function UsuariosPage() {
   )
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 space-y-6 relative">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Gestión de Usuarios</h1>
           <p className="text-slate-500">Administra los accesos al sistema</p>
         </div>
         <Link href="/administrador/usuarios/nuevo_usuario">
-          <Button className="bg-orange-600 hover:bg-orange-700">
+          <Button className="bg-blue-600 hover:bg-blue-700">
             <Plus className="mr-2 h-4 w-4" /> Nuevo Usuario
           </Button>
         </Link>
@@ -124,7 +140,7 @@ export default function UsuariosPage() {
                           <Link href={`/administrador/usuarios/editar_usuario/${usuario.id}`}>
                             <Button variant="ghost" size="icon"><Edit2 className="h-4 w-4 text-blue-600" /></Button>
                           </Link>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(usuario.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleClickEliminar(usuario.id)}>
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         </div>
@@ -137,6 +153,49 @@ export default function UsuariosPage() {
           </div>
         </CardContent>
       </Card>
+
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Contenido del Modal */}
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-red-100">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Confirmar Eliminación
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    ¿Estás seguro de que deseas eliminar este usuario? Esta acción es permanente y no se puede deshacer.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de Acción */}
+            <div className="bg-slate-50 px-6 py-4 flex justify-end gap-3 border-t border-slate-100">
+              <Button 
+                variant="outline" 
+                onClick={cancelarEliminacion}
+                className="text-slate-700 bg-white hover:bg-slate-100"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmarEliminacion}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Sí, eliminar usuario
+              </Button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   )
 }
