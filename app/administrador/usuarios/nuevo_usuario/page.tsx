@@ -120,7 +120,7 @@ export default function NuevoUsuarioPage() {
 
           {error && <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-200">{error}</div>}
 
-          <Button onClick={handleSave} className="w-full bg-orange-600 hover:bg-orange-700" disabled={loading}>
+          <Button onClick={handleSave} className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             {loading ? "Guardando..." : "Guardar Usuario"}
           </Button>
