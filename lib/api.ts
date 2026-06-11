@@ -104,13 +104,8 @@ export const api = {
       method: 'GET',
       headers: getAuthHeaders() 
     });
-    
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error("🔥 ERROR EN GET ROLES:", res.status, errorText);
-      throw new Error("Error al obtener roles");
-    }
-    
+    if (!res.ok) throw new Error("Error al obtener roles");
+    return res.json();
   },
 
   crearRolCiudadano: async (data: { nombre_rol: string }) => {
@@ -142,6 +137,84 @@ export const api = {
     if (!res.ok && res.status !== 204) {
       throw new Error("Error al eliminar rol");
     }
+    return true;
+  },
+
+  // --- GESTIÓN ESTADOS SAC ---
+  getEstadosSAC: async () => {
+    const res = await fetch(`${BASE_URL}/estados_sac/`, { 
+      method: 'GET',
+      headers: getAuthHeaders() 
+    });
+    if (!res.ok) throw new Error("Error al obtener estados");
+    return res.json();
+  },
+
+  crearEstadoSAC: async (data: { estado_sac: string }) => {
+    const res = await fetch(`${BASE_URL}/estados_sac/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data), 
+    });
+    if (!res.ok) throw new Error("Error al crear estado");
+    return res.json();
+  },
+
+  editarEstadoSAC: async (id: number, data: { estado_sac: string }) => {
+    const res = await fetch(`${BASE_URL}/estados_sac/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Error al actualizar estado");
+    return res.json();
+  },
+
+  eliminarEstadoSAC: async (id: number) => {
+    const res = await fetch(`${BASE_URL}/estados_sac/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok && res.status !== 204) throw new Error("Error al eliminar estado");
+    return true;
+  },
+
+  // --- GESTIÓN RESPUESTAS SAC ---
+  getRespuestasSAC: async () => {
+    const res = await fetch(`${BASE_URL}/respuestas_sac/`, { 
+      method: 'GET',
+      headers: getAuthHeaders() 
+    });
+    if (!res.ok) throw new Error("Error al obtener respuestas");
+    return res.json();
+  },
+
+  crearRespuestaSAC: async (data: { respuesta_sac: string }) => {
+    const res = await fetch(`${BASE_URL}/respuestas_sac/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data), 
+    });
+    if (!res.ok) throw new Error("Error al crear respuesta");
+    return res.json();
+  },
+
+  editarRespuestaSAC: async (id: number, data: { respuesta_sac: string }) => {
+    const res = await fetch(`${BASE_URL}/respuestas_sac/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Error al actualizar respuesta");
+    return res.json();
+  },
+
+  eliminarRespuestaSAC: async (id: number) => {
+    const res = await fetch(`${BASE_URL}/respuestas_sac/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok && res.status !== 204) throw new Error("Error al eliminar respuesta");
     return true;
   },
 };
