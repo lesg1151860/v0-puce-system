@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
-import { Plus, Pencil, Trash2, Search, Building2, School, Lock } from "lucide-react"
+import { Plus, Pencil, Trash2, Search, Building2, School, Lock, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import toast from "react-hot-toast"
 
 export default function InstitucionesAdminPage() {
@@ -14,6 +14,7 @@ export default function InstitucionesAdminPage() {
   const [instituciones, setInstituciones] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const [filtroSector, setFiltroSector] = useState<string>("todos") // Nuevo filtro
   
   useEffect(() => {
     cargarInstituciones()
@@ -26,6 +27,7 @@ export default function InstitucionesAdminPage() {
       setInstituciones(data)
     } catch (error) {
       console.error("Error al cargar instituciones:", error)
+      toast.error("Error al cargar datos")
     } finally {
       setIsLoading(false)
     }
@@ -33,7 +35,6 @@ export default function InstitucionesAdminPage() {
 
   const handleDelete = async (id: number) => {
     if (!window.confirm("¿Estás seguro de eliminar esta institución?")) return
-    
     try {
       await api.eliminarInstitucion(id)
       toast.success("Institución eliminada exitosamente")
@@ -43,137 +44,110 @@ export default function InstitucionesAdminPage() {
     }
   }
 
-  const institucionesFiltradas = instituciones.filter(inst => 
-    inst.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  
+  const institucionesFiltradas = instituciones.filter(inst => {
+  const coincideBusqueda = inst.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+  const coincideSector = filtroSector === "todos" ? true : inst.sector === filtroSector
+    return coincideBusqueda && coincideSector
+  })
 
-  // Cálculos dinámicos para las tarjetas superiores
   const totalInst = instituciones.length
   const publicas = instituciones.filter((i: any) => i.sector === "PUBLICA").length
   const privadas = instituciones.filter((i: any) => i.sector === "PRIVADA").length
 
-
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Instituciones Educativas</h1>
-          <p className="text-slate-500">Gestión de Instituciones Educativas registradas en el sistema.</p>
+    <div className="grid grid-cols-1 gap-6 p-4 sm:p-8 w-full">
+      
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+        <div className="w-full min-w-0">
+          <h1 className="text-2xl font-bold text-slate-900 truncate">Instituciones Educativas</h1>
+          <p className="text-slate-500 truncate">Gestión de Instituciones registradas en el sistema.</p>
         </div>
-        <Button onClick={() => router.push("/administrador/instituciones/nueva_institucion")} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Institución
+        <Button onClick={() => router.push("/administrador/instituciones/nueva_institucion")} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto shrink-0">
+          <Plus className="h-4 w-4 mr-2" /> Nueva Institución
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Total Registradas</CardTitle>
-            <Building2 className="h-4 w-4 text-slate-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? "-" : totalInst}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Sector Público</CardTitle>
-            <School className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{isLoading ? "-" : publicas}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Sector Privado</CardTitle>
-            <Lock className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{isLoading ? "-" : privadas}</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+        <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0"><p className="text-sm font-medium text-slate-500 truncate">Total Registradas</p><h3 className="text-2xl sm:text-3xl font-bold truncate">{isLoading ? "-" : totalInst}</h3></div>
+          <Building2 className="h-8 w-8 text-slate-400 shrink-0" />
+        </CardContent></Card>
+        <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0"><p className="text-sm font-medium text-slate-500 truncate">Sector Público</p><h3 className="text-2xl sm:text-3xl font-bold text-blue-600 truncate">{isLoading ? "-" : publicas}</h3></div>
+          <School className="h-8 w-8 text-blue-500 shrink-0" />
+        </CardContent></Card>
+        <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0"><p className="text-sm font-medium text-slate-500 truncate">Sector Privado</p><h3 className="text-2xl sm:text-3xl font-bold text-orange-600 truncate">{isLoading ? "-" : privadas}</h3></div>
+          <Lock className="h-8 w-8 text-orange-500 shrink-0" />
+        </CardContent></Card>
       </div>
 
-      {/* Tabla de Datos */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center space-x-2">
-            <Search className="h-5 w-5 text-slate-400" />
-            <Input
-              placeholder="Buscar por nombre..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md" />
+      <Card className="w-full overflow-hidden border-slate-200 shadow-sm">
+        <CardContent className="p-0">
+          {/* Barra de herramientas */}
+          <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <Input placeholder="Buscar por nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-full h-10" />
+            </div>
+            
+            <select value={filtroSector} onChange={(e) => setFiltroSector(e.target.value)} className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700">
+              <option value="todos">Todos los Sectores</option>
+              <option value="PUBLICA">Pública</option>
+              <option value="PRIVADA">Privada</option>
+            </select>
+
+            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroSector("todos"); }} className="h-10 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
+              <X className="h-4 w-4 mr-2" /> Limpiar
+            </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-10 text-slate-500 animate-pulse">Cargando directorio...</div>
-          ) : (
-            <div className="border rounded-md overflow-hidden">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50 text-slate-700 font-medium border-b">
-                  <tr>
-                    <th className="px-4 py-3">Nombre</th>
-                    <th className="px-4 py-3">Sector</th>
-                    <th className="px-4 py-3">Rector</th>
-                    <th className="px-4 py-3">Número de Contacto</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {institucionesFiltradas.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="text-center py-8 text-slate-500">
-                        No se encontraron instituciones registradas.
+
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[900px] text-sm text-left">
+              <thead className="bg-slate-50 text-slate-700 font-medium border-b">
+                <tr>
+                  <th className="px-6 py-4 text-center">Nombre</th>
+                  <th className="px-6 py-4 text-center">Sector</th>
+                  <th className="px-6 py-4 text-center">Rector</th>
+                  <th className="px-6 py-4 text-center">Número de Contacto</th>
+                  <th className="px-6 py-4 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {isLoading ? (
+                  <tr><td colSpan={5} className="text-center py-10 text-slate-500">Cargando directorio...</td></tr>
+                ) : institucionesFiltradas.length === 0 ? (
+                  <tr><td colSpan={5} className="text-center py-10 text-slate-500">No se encontraron instituciones.</td></tr>
+                ) : (
+                  institucionesFiltradas.map((inst) => (
+                    <tr key={inst.id} className="hover:bg-slate-50 transition-colors bg-white">
+                      <td className="px-6 py-4 font-medium text-slate-900 text-center">{inst.nombre}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${inst.sector === 'PUBLICA' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`}>
+                          {inst.sector}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center text-slate-600">{inst.rector || "No asignado"}</td>
+                      <td className="px-6 py-4 text-center text-slate-600">
+                        {inst.num_contacto || "No definido"}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex justify-center gap-2">
+                          <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-800 hover:bg-blue-50" onClick={() => router.push(`/administrador/instituciones/editar_institucion/${inst.id}`)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-800 hover:bg-red-50" onClick={() => handleDelete(inst.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
-                  ) : (
-                    institucionesFiltradas.map((inst) => (
-                      <tr key={inst.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-slate-400" />
-                            {inst.nombre}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${inst.sector === 'PUBLICA' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`}>
-                            {inst.sector}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-slate-600">{inst.rector || "No asignado"}</td>
-                        <td className="px-4 py-3 text-slate-600">{inst.contacto || "No definido"}</td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                              onClick={() => router.push(`/administrador/instituciones/editar_institucion/${inst.id}`)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                              onClick={() => handleDelete(inst.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>
