@@ -96,4 +96,52 @@ export const api = {
     if (!res.ok && res.status !== 204) throw new Error("Error al eliminar");
     return true;
   },
+
+  // --- GESTIÓN ROLES CIUDADANO (SAC) ---
+  getRolesCiudadano: async () => {
+    // Asegúrate de que esta ruta sea idéntica a la que usas para el POST
+    const res = await fetch(`${BASE_URL}/rol_ciudadano/`, { 
+      method: 'GET',
+      headers: getAuthHeaders() 
+    });
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("🔥 ERROR EN GET ROLES:", res.status, errorText);
+      throw new Error("Error al obtener roles");
+    }
+    
+  },
+
+  crearRolCiudadano: async (data: { nombre_rol: string }) => {
+    const res = await fetch(`${BASE_URL}/rol_ciudadano/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ nombre_rol: data.nombre_rol }), 
+    });
+    if (!res.ok) throw new Error("Error al crear el rol");
+    return res.json();
+  },
+
+  editarRolCiudadano: async (id: number, data: { nombre_rol: string }) => {
+    const res = await fetch(`${BASE_URL}/rol_ciudadano/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ nombre_rol: data.nombre_rol }),
+    });
+    if (!res.ok) throw new Error("Error en la edición");
+    return res.json();
+  },
+
+  eliminarRolCiudadano: async (id: number) => {
+    const res = await fetch(`${BASE_URL}/rol_ciudadano/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    
+    if (!res.ok && res.status !== 204) {
+      throw new Error("Error al eliminar rol");
+    }
+    return true;
+  },
 };
