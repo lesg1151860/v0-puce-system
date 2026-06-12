@@ -4,11 +4,10 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import Image from "next/image"
-import {LogOut, Menu, X, LayoutDashboard, FileText, FileSpreadsheet, Users, Settings, Building, ChevronDown, ChevronRight,Circle} from "lucide-react"
+import { LogOut, Menu, X, LayoutDashboard, FileText, FileSpreadsheet, Users, Settings, Building, ChevronDown, ChevronRight, Circle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
-// Definición de tipos para soportar submenús
 type SubItem = {
   name: string
   href: string
@@ -33,6 +32,7 @@ const adminLinks: NavItem[] = [
   { name: "Dashboard", href: "/administrador", icon: LayoutDashboard },
   { name: "Usuarios", href: "/administrador/usuarios", icon: Users, description: "Gestión de usuarios y permisos" },
   { name: "Instituciones", href: "/administrador/instituciones", icon: Building, description: "Gestión de Instituciones Educativas" },
+  { name: "Clasificación de Casos", href: "/administrador/clasificacion_caso", icon: Settings, description: "Configura la clasificación de casos"},
   { 
     name: "Gestión para SAC", 
     href: "/administrador/sac", 
@@ -72,7 +72,7 @@ interface SidebarProps {
 export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [openMenu, setOpenMenu] = useState<string | null>("Gestión para SAC") 
+  const [openMenu, setOpenMenu] = useState<string | null>(null) 
   
   const links = type === "lider" ? liderLinks : adminLinks
 
@@ -83,11 +83,14 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
     window.location.replace("/login")
   }
 
-  const isActive = (href: string) => {
-    if (href === "/lider" || href === "/administrador") {
-      return pathname === href;
+  const isItemActive = (item: NavItem) => {
+    if (item.subItems) {
+      return item.subItems.some(sub => pathname === sub.href) || pathname.startsWith(item.href);
     }
-    return pathname === href || pathname.startsWith(`${href}/`);
+    if (item.href === "/administrador" || item.href === "/lider") {
+      return pathname === item.href;
+    }
+    return pathname.startsWith(item.href);
   }
 
   const toggleMenu = (name: string) => {
@@ -110,12 +113,8 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
         {!isCollapsed && (
           <div className="flex flex-col whitespace-nowrap overflow-hidden">
             <span className="text-lg font-bold text-slate-900 leading-tight">PUCE</span>
-            <span className="text-[10px] text-slate-500 leading-tight">
-              Plataforma Unificada de
-            </span>
-            <span className="text-[10px] text-slate-500 leading-tight">
-              Convivencia Escolar
-            </span>
+            <span className="text-[10px] text-slate-500 leading-tight">Plataforma Unificada de</span>
+            <span className="text-[10px] text-slate-500 leading-tight">Convivencia Escolar</span>
           </div>
         )}
       </div>
@@ -125,7 +124,7 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
         isCollapsed ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
       )}>
         {links.map((item) => {
-          const active = isActive(item.href)
+          const active = isItemActive(item)
           
           if (item.subItems) {
             const isOpen = openMenu === item.name
@@ -135,11 +134,10 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
                 
                 <button
                   onClick={() => toggleMenu(item.name)}
-                  title={undefined}
                   className={cn(
                     "flex items-center justify-between rounded-lg py-2.5 text-sm font-medium transition-all duration-200 w-full",
                     isCollapsed ? "justify-center px-0" : "px-3",
-                    (active || (!isCollapsed && isOpen)) 
+                    active 
                       ? "bg-blue-600 text-white shadow-sm" 
                       : "text-slate-700 hover:bg-blue-600 hover:text-white group-hover:bg-blue-600 group-hover:text-white"
                   )}
@@ -147,7 +145,7 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
                   <div className={cn("flex items-center gap-3", isCollapsed && "justify-center w-full")}>
                     <item.icon className={cn(
                       "h-5 w-5 shrink-0 transition-colors", 
-                      (active || (!isCollapsed && isOpen)) ? "text-white" : "text-slate-500 group-hover:text-white"
+                      active ? "text-white" : "text-slate-500 group-hover:text-white"
                     )} />
                     {!isCollapsed && <span>{item.name}</span>}
                   </div>
@@ -156,7 +154,6 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
                   )}
                 </button>
 
-                {/* --- MODO EXPANDIDO: Menú Acordeón Normal --- */}
                 {!isCollapsed && isOpen && (
                   <div className="mt-1 flex flex-col bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
                     {item.subItems.map((sub) => {
@@ -181,10 +178,6 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
                   </div>
                 )}
 
-                {/* --- MODO COLAPSADO: Menú Flotante CORREGIDO --- */}
-                {/* El contenedor principal invisible usa 'left-full' y 'pl-2' para crear 
-                  el "puente de hover" ininterrumpido.
-                */}
                 {isCollapsed && (
                   <div className="absolute left-full top-0 pl-2 hidden group-hover:block z-[999]">
                     <div className="w-60 rounded-md bg-white shadow-xl border border-slate-200 overflow-hidden">
@@ -195,16 +188,10 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
                         {item.subItems.map((sub) => {
                           const subActive = pathname === sub.href
                           return (
-                            <Link
-                              key={sub.name}
-                              href={sub.href}
-                              className={cn(
+                            <Link key={sub.name} href={sub.href} className={cn(
                                 "flex items-center gap-3 px-4 py-2 text-[13px] transition-colors",
-                                subActive 
-                                  ? "text-blue-700 bg-blue-50 font-semibold" 
-                                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                              )}
-                            >
+                                subActive ? "text-blue-700 bg-blue-50 font-semibold" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                            )}>
                               <Circle className={cn("h-2.5 w-2.5", subActive ? "fill-blue-600 text-blue-600" : "stroke-[2px]")} />
                               <span className="truncate">{sub.name}</span>
                             </Link>
@@ -218,13 +205,14 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
             )
           }
 
-          // Renderizado para enlaces normales sin submenú
           return (
             <Link
               key={item.name}
               href={item.href}
-              onClick={() => setMobileMenuOpen(false)}
-              title={isCollapsed ? item.name : undefined}
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setOpenMenu(null);
+              }}
               className={cn(
                 "group flex items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200",
                 isCollapsed ? "justify-center px-0" : "gap-3 px-3",
@@ -248,17 +236,9 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
       </nav>
       
       <div className="p-3 shrink-0">
-        <Button
-          variant="ghost"
-          onClick={handleLogout}
-          title={isCollapsed ? "Cerrar Sesión" : undefined}
-          className={cn(
-            "w-full text-slate-700 hover:bg-red-50 hover:text-red-700 transition-all",
-            isCollapsed ? "justify-center px-0" : "justify-start px-3"
-          )}
-        >
+        <Button variant="ghost" onClick={handleLogout} className={cn("w-full text-slate-700 hover:bg-red-50 hover:text-red-700 transition-all", isCollapsed ? "justify-center px-0" : "justify-start px-3")}>
           <LogOut className={cn("h-5 w-5 shrink-0", !isCollapsed && "mr-3")} />
-          {!isCollapsed && <span className="whitespace-nowrap overflow-hidden">Cerrar Sesión</span>}
+          {!isCollapsed && <span>Cerrar Sesión</span>}
         </Button>
       </div>
     </div>
@@ -270,26 +250,10 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
         <button type="button" className="text-slate-700" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
-        <div className="ml-4 flex items-center gap-2">
-          <Image src="/images/logo-puce.png" alt="Logo PUCE" width={32} height={32} priority className="rounded-full" />
-          <span className="font-bold text-slate-900">PUCE</span>
-        </div>
       </div>
-
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMobileMenuOpen(false)} />
-      )}
-
-      <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white transition-transform lg:hidden",
-        mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        {sidebarContent}
-      </aside>
-
-      <aside className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white transition-all duration-300 ease-in-out z-20 ${isCollapsed ? 'w-20' : 'w-64'}`}>
-        {sidebarContent}
-      </aside>
+      {mobileMenuOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMobileMenuOpen(false)} />}
+      <aside className={cn("fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white border-r border-slate-200 transition-transform lg:hidden", mobileMenuOpen ? "translate-x-0" : "-translate-x-full")}>{sidebarContent}</aside>
+      <aside className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white transition-all duration-300 ease-in-out z-20 ${isCollapsed ? 'w-20' : 'w-64'}`}>{sidebarContent}</aside>
     </>
   )
 }
