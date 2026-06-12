@@ -36,14 +36,32 @@ const adminLinks: NavItem[] = [
   { 
     name: "Gestión para SAC", 
     href: "/administrador/sac", 
-    icon: Users,
+    icon: FileText,
+    description: "Configuración de parámetros para el SAC",
     subItems: [
       { name: "Gestión Rol del Ciudadano", href: "/administrador/gestion_sac/rol_ciudadano" },
       { name: "Gestión Estados del SAC", href: "/administrador/gestion_sac/estados_sac" },
       { name: "Gestión Respuestas SAC", href: "/administrador/gestion_sac/respuestas_sac" },
     ]
   },
-  { name: "Configuración", href: "/administrador/configuracion", icon: Settings, description: "Ajustes globales del sistema" },
+  { 
+    name: "Gestión para SIUCE", 
+    href: "/administrador/siuce", 
+    icon: FileText,
+    description: "Configuración de parámetros para el SIUCE",
+    subItems: [
+      { name: "Tipo de Identificación", href: "/administrador/gestion_siuce/tipo_identificacion" },
+      { name: "Estado del SIUCE", href: "/administrador/gestion_siuce/estado_siuce" },
+      { name: "Grado de Escolaridad", href: "/administrador/gestion_siuce/grado_escolaridad" },
+      { name: "Tipos de Daño", href: "/administrador/gestion_siuce/tipos_dano" },
+      { name: "Tipos de Agresión", href: "/administrador/gestion_siuce/tipos_agresion" },
+      { name: "Evento Generador", href: "/administrador/gestion_siuce/evento_generador" },
+      { name: "Rol Agresor", href: "/administrador/gestion_siuce/rol_agresor" },
+      { name: "Lugar de los Hechos", href: "/administrador/gestion_siuce/lugar_hechos" },
+      { name: "Acciones de la I.E.", href: "/administrador/gestion_siuce/acciones_ie" },
+      { name: "Acciones de la S.E.M.", href: "/administrador/gestion_siuce/acciones_sem" },
+    ]
+  },
 ]
 
 interface SidebarProps {
