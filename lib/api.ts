@@ -142,7 +142,7 @@ export const api = {
 
   // --- GESTIÓN ESTADOS SAC ---
   getEstadosSAC: async () => {
-    const res = await fetch(`${BASE_URL}/estados_sac/`, { 
+    const res = await fetch(`${BASE_URL}/estado_sac/`, { 
       method: 'GET',
       headers: getAuthHeaders() 
     });
@@ -151,7 +151,7 @@ export const api = {
   },
 
   crearEstadoSAC: async (data: { estado_sac: string }) => {
-    const res = await fetch(`${BASE_URL}/estados_sac/`, {
+    const res = await fetch(`${BASE_URL}/estado_sac/`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data), 
@@ -161,7 +161,7 @@ export const api = {
   },
 
   editarEstadoSAC: async (id: number, data: { estado_sac: string }) => {
-    const res = await fetch(`${BASE_URL}/estados_sac/${id}/`, {
+    const res = await fetch(`${BASE_URL}/estado_sac/${id}/`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -171,7 +171,7 @@ export const api = {
   },
 
   eliminarEstadoSAC: async (id: number) => {
-    const res = await fetch(`${BASE_URL}/estados_sac/${id}/`, {
+    const res = await fetch(`${BASE_URL}/estado_sac/${id}/`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
@@ -181,7 +181,7 @@ export const api = {
 
   // --- GESTIÓN RESPUESTAS SAC ---
   getRespuestasSAC: async () => {
-    const res = await fetch(`${BASE_URL}/respuestas_sac/`, { 
+    const res = await fetch(`${BASE_URL}/respuesta_sac/`, { 
       method: 'GET',
       headers: getAuthHeaders() 
     });
@@ -190,7 +190,7 @@ export const api = {
   },
 
   crearRespuestaSAC: async (data: { respuesta_sac: string }) => {
-    const res = await fetch(`${BASE_URL}/respuestas_sac/`, {
+    const res = await fetch(`${BASE_URL}/respuesta_sac/`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data), 
@@ -200,7 +200,7 @@ export const api = {
   },
 
   editarRespuestaSAC: async (id: number, data: { respuesta_sac: string }) => {
-    const res = await fetch(`${BASE_URL}/respuestas_sac/${id}/`, {
+    const res = await fetch(`${BASE_URL}/respuesta_sac/${id}/`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -210,11 +210,46 @@ export const api = {
   },
 
   eliminarRespuestaSAC: async (id: number) => {
-    const res = await fetch(`${BASE_URL}/respuestas_sac/${id}/`, {
+    const res = await fetch(`${BASE_URL}/respuesta_sac/${id}/`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
     if (!res.ok && res.status !== 204) throw new Error("Error al eliminar respuesta");
+    return true;
+  },
+
+  // --- GESTIÓN CLASIFICACIÓN ---
+  
+  getClasificaciones: async () => {
+    const res = await fetch(`${BASE_URL}/clasificacion_caso/`, { 
+      method: 'GET',
+      headers: getAuthHeaders() 
+    });
+    
+    // Es vital que el error sea manejado si la respuesta no es 200
+    if (!res.ok) throw new Error("Error al obtener datos");
+    
+    return res.json();
+  },
+
+  guardarClasificacion: async (id: number | null, data: { descripcion: string }) => {
+    const url = id ? `${BASE_URL}/clasificacion_caso/${id}/` : `${BASE_URL}/clasificacion_caso/`;
+    const method = id ? 'PATCH' : 'POST';
+    const res = await fetch(url, {
+      method: method,
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Error al guardar clasificación");
+    return res.json();
+  },
+
+  eliminarClasificacion: async (id: number) => {
+    const res = await fetch(`${BASE_URL}/clasificacion_caso/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error("Error al eliminar clasificación");
     return true;
   },
 };
