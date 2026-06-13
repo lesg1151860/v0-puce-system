@@ -97,7 +97,7 @@ export const api = {
     return true;
   },
 
-  // --- GESTIÓN ROLES CIUDADANO (SAC) ---
+  // --- GESTIÓN ROLES CIUDADANO ---
   getRolesCiudadano: async () => {
     // Asegúrate de que esta ruta sea idéntica a la que usas para el POST
     const res = await fetch(`${BASE_URL}/rol_ciudadano/`, { 
@@ -219,14 +219,11 @@ export const api = {
   },
 
   // --- GESTIÓN CLASIFICACIÓN ---
-  
   getClasificaciones: async () => {
     const res = await fetch(`${BASE_URL}/clasificacion_caso/`, { 
       method: 'GET',
       headers: getAuthHeaders() 
     });
-    
-    // Es vital que el error sea manejado si la respuesta no es 200
     if (!res.ok) throw new Error("Error al obtener datos");
     
     return res.json();
@@ -250,6 +247,201 @@ export const api = {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error("Error al eliminar clasificación");
+    return true;
+  },
+
+  // --- GESTIÓN TIPOS DE IDENTIFICACIÓN ---
+  getTiposIdentificacion: async () => {
+    const res = await fetch(`${BASE_URL}/tipo_identificacion/`, { 
+      method: 'GET',
+      headers: getAuthHeaders() 
+    });
+    if (!res.ok) throw new Error("Error al obtener tipos de identificación");
+    return res.json();
+  },
+
+  crearTipoIdentificacion: async (data: { codigo: string; descripcion: string; activo: boolean }) => {
+    const res = await fetch(`${BASE_URL}/tipo_identificacion/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data), 
+    });
+    if (!res.ok) throw new Error("Error al crear tipo de identificación");
+    return res.json();
+  },
+
+  editarTipoIdentificacion: async (id: number, data: { codigo?: string; descripcion?: string; activo?: boolean }) => {
+    const res = await fetch(`${BASE_URL}/tipo_identificacion/${id}/`, {
+      method: 'PATCH', // Usamos PATCH para permitir actualizaciones parciales (ej. solo cambiar 'activo')
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Error al actualizar tipo de identificación");
+    return res.json();
+  },
+
+  eliminarTipoIdentificacion: async (id: number) => {
+    const res = await fetch(`${BASE_URL}/tipo_identificacion/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok && res.status !== 204) throw new Error("Error al eliminar tipo de identificación");
+    return true;
+  },
+
+  // --- GESTIÓN ESTADOS SIUCE ---
+  getEstadosSIUCE: async () => {
+    const res = await fetch(`${BASE_URL}/estado_siuce/`, { 
+      method: 'GET',
+      headers: getAuthHeaders() 
+    });
+    if (!res.ok) throw new Error("Error al obtener los estados del SIUCE");
+    return res.json();
+  },
+
+  crearEstadoSIUCE: async (data: { estado_siuce: string }) => {
+    const res = await fetch(`${BASE_URL}/estado_siuce/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data), 
+    });
+    if (!res.ok) throw new Error("Error al crear el estado del SIUCE");
+    return res.json();
+  },
+
+  editarEstadoSIUCE: async (id: number, data: { estado_siuce: string }) => {
+    const res = await fetch(`${BASE_URL}/estado_siuce/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Error al actualizar el estado del SIUCE");
+    return res.json();
+  },
+
+  eliminarEstadoSIUCE: async (id: number) => {
+    const res = await fetch(`${BASE_URL}/estado_siuce/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok && res.status !== 204) throw new Error("Error al eliminar el estado del SIUCE");
+    return true;
+  },
+
+  // --- GESTIÓN GRADOS DE ESCOLARIDAD ---
+  getGradosEscolaridad: async () => {
+    const res = await fetch(`${BASE_URL}/grado_escolaridad/`, { 
+      method: 'GET',
+      headers: getAuthHeaders() 
+    });
+    if (!res.ok) throw new Error("Error al obtener los grados de escolaridad");
+    return res.json();
+  },
+
+  crearGradoEscolaridad: async (data: { nom_grado: string; }) => {
+    const res = await fetch(`${BASE_URL}/grado_escolaridad/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data), 
+    });
+    if (!res.ok) throw new Error("Error al crear el grado de escolaridad");
+    return res.json();
+  },
+
+  editarGradoEscolaridad: async (id: number, data: { nom_grado: string }) => {
+    const res = await fetch(`${BASE_URL}/grado_escolaridad/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Error al actualizar el grado de escolaridad");
+    return res.json();
+  },
+
+  eliminarGradoEscolaridad: async (id: number) => {
+    const res = await fetch(`${BASE_URL}/grado_escolaridad/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok && res.status !== 204) throw new Error("Error al eliminar el grado de escolaridad");
+    return true;
+  },
+
+  // --- GESTIÓN TIPOS DE DAÑO ---
+  getTiposDano: async () => {
+    const res = await fetch(`${BASE_URL}/tipo_dano/`, { 
+      method: 'GET',
+      headers: getAuthHeaders() 
+    });
+    if (!res.ok) throw new Error("Error al obtener los tipos de daño");
+    return res.json();
+  },
+
+  crearTipoDano: async (data: { tipo_dano: string }) => {
+    const res = await fetch(`${BASE_URL}/tipo_dano/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data), 
+    });
+    if (!res.ok) throw new Error("Error al crear el tipo de daño");
+    return res.json();
+  },
+
+  editarTipoDano: async (id: number, data: { tipo_dano: string }) => {
+    const res = await fetch(`${BASE_URL}/tipo_dano/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Error al actualizar el tipo de daño");
+    return res.json();
+  },
+
+  eliminarTipoDano: async (id: number) => {
+    const res = await fetch(`${BASE_URL}/tipo_dano/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok && res.status !== 204) throw new Error("Error al eliminar el tipo de daño");
+    return true;
+  },
+
+  // --- GESTIÓN TIPOS DE AGRESIÓN ---
+  getTiposAgresion: async () => {
+    const res = await fetch(`${BASE_URL}/tipo_agresion/`, { 
+      method: 'GET',
+      headers: getAuthHeaders() 
+    });
+    if (!res.ok) throw new Error("Error al obtener los tipos de agresión");
+    return res.json();
+  },
+
+  crearTipoAgresion: async (data: { tipo_agresion: string }) => {
+    const res = await fetch(`${BASE_URL}/tipo_agresion/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data), 
+    });
+    if (!res.ok) throw new Error("Error al crear el tipo de agresión");
+    return res.json();
+  },
+
+  editarTipoAgresion: async (id: number, data: { tipo_agresion: string }) => {
+    const res = await fetch(`${BASE_URL}/tipo_agresion/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Error al actualizar el tipo de agresión");
+    return res.json();
+  },
+
+  eliminarTipoAgresion: async (id: number) => {
+    const res = await fetch(`${BASE_URL}/tipo_agresion/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok && res.status !== 204) throw new Error("Error al eliminar el tipo de agresión");
     return true;
   },
 };
