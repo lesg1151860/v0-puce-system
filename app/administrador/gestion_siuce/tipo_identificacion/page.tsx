@@ -1,243 +1,195 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import { api } from '@/lib/api'; // Ajusta la ruta si es necesario
+import { useEffect, useState } from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, Power, PowerOff, X, Fingerprint } from "lucide-react"
+import { api } from "@/lib/api"
+import toast from "react-hot-toast"
 
-// Tipado para TypeScript
-interface TipoIdentificacion {
-  id: number;
-  codigo: string;
-  descripcion: string;
-  activo: boolean;
-}
+export default function TiposIdentificacionPage() {
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filtroEstado, setFiltroEstado] = useState("todos")
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const [itemEnProceso, setItemEnProceso] = useState<any | null>(null)
+  const [textoConfirmacion, setTextoConfirmacion] = useState("")
+  const [descripcion, setDescripcion] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
-export default function GestionTipoIdentificacion() {
-  const [tipos, setTipos] = useState<TipoIdentificacion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  // Estados para el Modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ codigo: '', descripcion: '', activo: true });
-
-  const fetchTipos = async () => {
+  const fetchItems = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await api.getTiposIdentificacion();
-      setTipos(data);
-    } catch (error) {
-      console.error("Error obteniendo tipos de identificación:", error);
-      // Si el error persiste, abre la consola (F12) en la pestaña "Network/Red" para ver qué responde Django
+      const data: any = await api.getTiposIdentificacion();
+      const loadedItems = data?.results ? data.results : (Array.isArray(data) ? data : []);
+      setItems(loadedItems);
+    } catch {
+      toast.error("Error al cargar tipos de identificación.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  useEffect(() => {
-    fetchTipos();
-  }, []);
+  useEffect(() => { fetchItems() }, [])
 
-  const handleOpenModal = (tipo?: TipoIdentificacion) => {
-    if (tipo) {
-      setFormData({ codigo: tipo.codigo, descripcion: tipo.descripcion, activo: tipo.activo });
-      setEditingId(tipo.id);
-    } else {
-      setFormData({ codigo: '', descripcion: '', activo: true });
-      setEditingId(null);
-    }
-    setIsModalOpen(true);
-  };
+  const itemsFiltrados = items.filter(i => {
+    const coincideBusqueda = (i.descripcion || "").toLowerCase().includes(searchTerm.toLowerCase());
+    let coincideEstado = true;
+    if (filtroEstado === "activo") coincideEstado = i.activo === true;
+    if (filtroEstado === "inactivo") coincideEstado = i.activo === false;
+    return coincideBusqueda && coincideEstado;
+  });
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setFormData({ codigo: '', descripcion: '', activo: true });
-    setEditingId(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const confirmarCambioEstado = async () => {
     try {
-      if (editingId) {
-        await api.editarTipoIdentificacion(editingId, formData);
-      } else {
-        await api.crearTipoIdentificacion(formData);
-      }
-      fetchTipos();
-      handleCloseModal();
-    } catch (error) {
-      console.error("Error al guardar:", error);
-      alert("Hubo un error al guardar. Revisa la consola.");
-    }
-  };
+      await api.toggleActivoTipoIdentificacion(itemEnProceso.id, !itemEnProceso.activo)
+      toast.success("Estado actualizado.")
+      fetchItems()
+    } catch { toast.error("Error al actualizar.") }
+    finally { setIsStatusModalOpen(false) }
+  }
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm("¿Estás seguro de que deseas eliminar este registro?")) {
-      try {
-        await api.eliminarTipoIdentificacion(id);
-        fetchTipos();
-      } catch (error) {
-        console.error("Error al eliminar:", error);
-        alert("No se puede eliminar porque está asociado a un caso SIUCE. Intenta desactivarlo editándolo.");
-      }
-    }
-  };
+  const ejecutarEliminacion = async () => {
+    try {
+      await api.eliminarTipoIdentificacion(itemEnProceso.id)
+      toast.success("Eliminado correctamente.")
+      fetchItems()
+    } catch { toast.error("Error al eliminar.") }
+    finally { setIsDeleteModalOpen(false) }
+  }
 
-  const filteredTipos = tipos.filter(t => 
-    t.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.codigo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const guardarItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!descripcion.trim()) return toast.error("La descripción es obligatoria.");
+    setIsSaving(true);
+    try {
+      if (itemEnProceso?.id) await api.editarTipoIdentificacion(itemEnProceso.id, { tipo_identificacion: descripcion });
+      else await api.crearTipoIdentificacion({ tipo_identificacion: descripcion, activo: true });
+      toast.success("Tipo de Identificación guardado correctamente.");
+      fetchItems();
+      setIsFormModalOpen(false);
+      setDescripcion("");
+    } catch { toast.error("Error al guardar el tipo de identificación."); }
+    finally { setIsSaving(false); }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === "Enter") guardarItem(e as any); };
+  const total = items.length;
+  const activos = items.filter(i => i.activo).length;
+  const inactivos = total - activos;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto text-gray-800">
-      {/* Encabezado calcado de tu diseño */}
-      <div className="flex justify-between items-center mb-6">
+    <div className="grid grid-cols-1 gap-6 p-4 sm:p-8 w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1e3a5f]">Gestión Tipo de Identificación</h1>
-          <p className="text-sm text-gray-500">Administra los tipos de documentos disponibles para el módulo SAC e SIUCE</p>
+          <h1 className="text-2xl font-bold text-slate-800">Tipos de Identificación</h1>
+          <p className="text-slate-500 truncate">Gestión de Tipos de Identificación registrados en el sistema.</p>
         </div>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition"
-        >
-          <span>+</span> Nuevo Tipo
-        </button>
+        <Button onClick={() => { setItemEnProceso(null); setDescripcion(""); setIsFormModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+          <Plus className="mr-2 h-4 w-4" /> Nuevo Tipo de Identificación
+        </Button>
       </div>
 
-      {/* Contenedor Principal (Tarjeta blanca) */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        
-        {/* Buscador y Contador */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="relative w-1/2 max-w-md">
-            <svg className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-            <input
-              type="text"
-              placeholder="Buscar por descripción o código..."
-              className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center text-gray-500 text-sm font-medium gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
-            Total Registros: {filteredTipos.length}
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card><CardContent className="p-4 flex items-center justify-between"><div className="min-w-0"><p className="text-sm text-slate-500">Total</p><h3 className="text-2xl font-bold">{total}</h3></div><Fingerprint className="h-8 w-8 text-blue-500 opacity-80"/></CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center justify-between"><div className="min-w-0"><p className="text-sm text-slate-500">Activos</p><h3 className="text-2xl font-bold">{activos}</h3></div><CheckCircle2 className="h-8 w-8 text-green-500 opacity-80"/></CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center justify-between"><div className="min-w-0"><p className="text-sm text-slate-500">Inactivos</p><h3 className="text-2xl font-bold">{inactivos}</h3></div><XCircle className="h-8 w-8 text-red-500 opacity-80"/></CardContent></Card>
+      </div>
 
-        {/* Tabla */}
-        <div className="overflow-x-auto border rounded-lg">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b">
-                <th className="p-4 font-semibold text-center w-24">Código</th>
-                <th className="p-4 font-semibold text-center">Descripción del Tipo</th>
-                <th className="p-4 font-semibold text-center w-32">Estado</th>
-                <th className="p-4 font-semibold text-center w-32">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr><td colSpan={4} className="p-4 text-center text-gray-500">Cargando datos...</td></tr>
-              ) : filteredTipos.length === 0 ? (
-                <tr><td colSpan={4} className="p-4 text-center text-gray-500">No se encontraron registros.</td></tr>
-              ) : (
-                filteredTipos.map((tipo) => (
-                  <tr key={tipo.id} className="hover:bg-gray-50 transition">
-                    <td className="p-4 text-center font-medium text-gray-700">{tipo.codigo}</td>
-                    <td className="p-4 text-center text-gray-600">{tipo.descripcion}</td>
-                    <td className="p-4 text-center">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${tipo.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {tipo.activo ? 'Activo' : 'Inactivo'}
+      <Card className="w-full shadow-sm">
+        <CardContent className="p-0">
+          <div className="p-4 border-b flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <Input placeholder="Buscar por tipo..." className="pl-10 h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+            <select className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+              <option value="todos">Todos los estados</option>
+              <option value="activo">Solo Activos</option>
+              <option value="inactivo">Solo Inactivos</option>
+            </select>
+            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); }} className="h-10"><X className="h-4 w-4 mr-2"/> Limpiar</Button>
+          </div>
+          
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[500px] text-sm text-left">
+              <thead className="bg-slate-50 border-b">
+                <tr>
+                  <th className="px-6 py-4 text-center">Descripción</th>
+                  <th className="px-6 py-4 text-center">Estado</th>
+                  <th className="px-6 py-4 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {itemsFiltrados.map((i) => (
+                  <tr key={i.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-center font-medium">{i.tipo_identificacion}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${i.activo ? 'bg-green-100 text-green-700' : 'bg-slate-200'}`}>
+                        {i.activo ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
-                    <td className="p-4 flex justify-center gap-4">
-                      {/* Botón Editar (Lápiz Azul) */}
-                      <button onClick={() => handleOpenModal(tipo)} className="text-blue-500 hover:text-blue-700 transition">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                        </svg>
-                      </button>
-                      {/* Botón Eliminar (Basurero Rojo) */}
-                      <button onClick={() => handleDelete(tipo.id)} className="text-red-500 hover:text-red-700 transition">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                      </button>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex justify-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => { setItemEnProceso(i); setDescripcion(i.tipo_identificacion); setIsFormModalOpen(true); }}><Edit2 className="h-4 w-4 text-blue-600"/></Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setItemEnProceso(i); setIsStatusModalOpen(true); }}>
+                           {i.activo ? <PowerOff className="h-4 w-4 text-amber-600"/> : <Power className="h-4 w-4 text-green-600"/>}
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setItemEnProceso(i); setTextoConfirmacion(""); setIsDeleteModalOpen(true); }}><Trash2 className="h-4 w-4 text-red-600"/></Button>
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Modal Formulario */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">
-                {editingId ? 'Editar Tipo de Identificación' : 'Nuevo Tipo de Identificación'}
-              </h2>
-              <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-              </button>
+      {/* --- MODALES --- */}
+      {isFormModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
+          <form onSubmit={guardarItem} className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">{itemEnProceso ? "Editar" : "Nuevo"} Tipo de Identificación</h3>
+            <Input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} onKeyDown={handleKeyDown} autoFocus />
+            <div className="flex justify-end gap-3 mt-4">
+              <Button type="button" variant="outline" onClick={() => setIsFormModalOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={isSaving}>Guardar</Button>
             </div>
+          </form>
+        </div>
+      )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Código (Ej. CC, TI)</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.codigo}
-                  onChange={(e) => setFormData({...formData, codigo: e.target.value})}
-                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-                  className="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
+      {isStatusModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm text-center">
+            <h3 className="font-bold">Confirmar cambio</h3>
+            <p className="my-4">¿Cambiar estado de "{itemEnProceso.tipo_identificacion}"?</p>
+            <div className="flex justify-center gap-3">
+              <Button variant="outline" onClick={() => setIsStatusModalOpen(false)}>Cancelar</Button>
+              <Button onClick={confirmarCambioEstado}>Confirmar</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
-              <div className="flex items-center pt-2">
-                <input
-                  type="checkbox"
-                  id="activo"
-                  checked={formData.activo}
-                  onChange={(e) => setFormData({...formData, activo: e.target.checked})}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="activo" className="ml-2 block text-sm text-gray-900">
-                  Estado Activo
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
-                <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition">
-                  Cancelar
-                </button>
-                <button type="submit" className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition">
-                  Guardar
-                </button>
-              </div>
-            </form>
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold">Eliminar "{itemEnProceso.tipo_identificacion}"</h3>
+            <p className="text-sm text-slate-500 mb-4">Escribe el tipo de identificación para confirmar:</p>
+            <Input value={textoConfirmacion} onChange={(e) => setTextoConfirmacion(e.target.value)} />
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancelar</Button>
+              <Button variant="destructive" disabled={textoConfirmacion !== itemEnProceso.tipo_identificacion} onClick={ejecutarEliminacion}>Eliminar</Button>
+            </div>
           </div>
         </div>
       )}
     </div>
-  );
+  )
 }
