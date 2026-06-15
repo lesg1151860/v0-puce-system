@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Search, Edit2, Trash2, Tag, CheckCircle2, XCircle, Power, PowerOff, X } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, Power, PowerOff, X, Workflow } from "lucide-react"
 import { api } from "@/lib/api"
 import toast from "react-hot-toast"
 
@@ -13,17 +13,12 @@ export default function EstadosSACPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filtroEstado, setFiltroEstado] = useState("todos")
-  
-  // Modales
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
-  
-  // Datos temporales
   const [itemEnEnEdicion, setItemEnEdicion] = useState<any | null>(null)
   const [itemAEliminar, setItemAEliminar] = useState<any | null>(null)
   const [itemACambiar, setItemACambiar] = useState<any | null>(null)
-  
   const [descripcion, setDescripcion] = useState("")
   const [textoConfirmacion, setTextoConfirmacion] = useState("")
   const [isSaving, setIsSaving] = useState(false)
@@ -43,7 +38,6 @@ export default function EstadosSACPage() {
 
   useEffect(() => { fetchEstados() }, [])
 
-  // --- Lógica de filtrado combinada ---
   const estadosFiltrados = estados.filter(e => {
     const coincideBusqueda = (e.estado_sac || "").toLowerCase().includes(searchTerm.toLowerCase());
     let coincideEstado = true;
@@ -52,7 +46,6 @@ export default function EstadosSACPage() {
     return coincideBusqueda && coincideEstado;
   });
 
-  // --- Acciones ---
   const confirmarCambioEstado = async () => {
     try {
       await api.toggleActivoEstadoSAC(itemACambiar.id, !itemACambiar.activo)
@@ -108,14 +101,12 @@ export default function EstadosSACPage() {
         </Button>
       </div>
 
-      {/* Resumen Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card><CardContent className="p-4 flex items-center justify-between"><div className="min-w-0"><p className="text-sm text-slate-500">Total</p><h3 className="text-2xl font-bold">{total}</h3></div><Tag className="h-8 w-8 text-blue-500 opacity-80"/></CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center justify-between"><div className="min-w-0"><p className="text-sm text-slate-500">Total</p><h3 className="text-2xl font-bold">{total}</h3></div><Workflow className="h-8 w-8 text-blue-500 opacity-80"/></CardContent></Card>
         <Card><CardContent className="p-4 flex items-center justify-between"><div className="min-w-0"><p className="text-sm text-slate-500">Activos</p><h3 className="text-2xl font-bold">{activos}</h3></div><CheckCircle2 className="h-8 w-8 text-green-500 opacity-80"/></CardContent></Card>
         <Card><CardContent className="p-4 flex items-center justify-between"><div className="min-w-0"><p className="text-sm text-slate-500">Inactivos</p><h3 className="text-2xl font-bold">{inactivos}</h3></div><XCircle className="h-8 w-8 text-red-500 opacity-80"/></CardContent></Card>
       </div>
 
-      {/* Tabla */}
       <Card className="w-full shadow-sm">
         <CardContent className="p-0">
           <div className="p-4 border-b flex flex-col sm:flex-row gap-3">

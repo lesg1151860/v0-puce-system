@@ -4,211 +4,189 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Search, Edit2, Trash2, AlertTriangle, MessageSquare } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, Power, PowerOff, X, MessageSquare } from "lucide-react"
 import { api } from "@/lib/api"
 import toast from "react-hot-toast"
 
 export default function RespuestasSACPage() {
-  const [respuestas, setRespuestas] = useState<any[]>([])
+  const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [respuestaAEliminar, setRespuestaAEliminar] = useState<number | null>(null)
-
+  const [filtroEstado, setFiltroEstado] = useState("todos")
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
-  const [respuestaEnEdicion, setRespuestaEnEdicion] = useState<any | null>(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const [itemEnProceso, setItemEnProceso] = useState<any | null>(null)
+  const [textoConfirmacion, setTextoConfirmacion] = useState("")
   const [descripcion, setDescripcion] = useState("")
   const [isSaving, setIsSaving] = useState(false)
 
-  const fetchRespuestas = async () => {
+  const fetchItems = async () => {
     setLoading(true);
     try {
       const data: any = await api.getRespuestasSAC();
-      const items = data?.results ? data.results : (Array.isArray(data) ? data : []);
-      setRespuestas(items);
-    } catch (error) {
-      toast.error("Error al cargar las respuestas del SAC.");
-      setRespuestas([]);
+      const loadedItems = data?.results ? data.results : (Array.isArray(data) ? data : []);
+      setItems(loadedItems);
+    } catch {
+      toast.error("Error al cargar respuestas SAC.");
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { fetchRespuestas() }, [])
+  useEffect(() => { fetchItems() }, [])
 
-  const handleClickEliminar = (id: number) => {
-    setRespuestaAEliminar(id)
-    setIsDeleteModalOpen(true)
-  }
-
-  const confirmarEliminacion = async () => {
-    if (respuestaAEliminar === null) return
+  const itemsFiltrados = items.filter(i => {
+    const coincideBusqueda = (i.respuesta_sac || "").toLowerCase().includes(searchTerm.toLowerCase());
+    let coincideEstado = true;
+    if (filtroEstado === "activo") coincideEstado = i.activo === true;
+    if (filtroEstado === "inactivo") coincideEstado = i.activo === false;
+    return coincideBusqueda && coincideEstado;
+  });
+  
+  const confirmarCambioEstado = async () => {
     try {
-      await api.eliminarRespuestaSAC(respuestaAEliminar)
-      fetchRespuestas()
-      toast.success("Respuesta eliminada exitosamente.")
-    } catch (error) {
-      toast.error("Error al eliminar la respuesta.")
-    } finally {
-      setIsDeleteModalOpen(false)
-      setRespuestaAEliminar(null)
-    }
+      await api.toggleActivoRespuestaSAC(itemEnProceso.id, !itemEnProceso.activo)
+      toast.success("Estado actualizado.")
+      fetchItems()
+    } catch { toast.error("Error al actualizar la respuesta SAC.") }
+    finally { setIsStatusModalOpen(false) }
   }
 
-  const abrirModalFormulario = (respuesta: any = null) => {
-    setRespuestaEnEdicion(respuesta);
-    setDescripcion(respuesta ? (respuesta.respuesta_sac || "") : ""); 
-    setIsFormModalOpen(true);
+  const ejecutarEliminacion = async () => {
+    try {
+      await api.eliminarRespuestaSAC(itemEnProceso.id)
+      toast.success("Eliminado correctamente.")
+      fetchItems()
+    } catch { toast.error("Error al eliminar la respuesta SAC.") }
+    finally { setIsDeleteModalOpen(false) }
   }
 
-  const guardarRespuesta = async (e: React.FormEvent) => {
+  const guardarItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!descripcion.trim()) return toast.error("El contenido es obligatorio.");
-
+    if (!descripcion.trim()) return toast.error("La respuesta es obligatoria.");
     setIsSaving(true);
     try {
-      const payload = { respuesta_sac: descripcion }; 
-      if (respuestaEnEdicion) {
-        await api.editarRespuestaSAC(respuestaEnEdicion.id, payload);
-        toast.success("Respuesta actualizada exitosamente.");
-      } else {
-        await api.crearRespuestaSAC(payload);
-        toast.success("Respuesta creada exitosamente.");
-      }
-      fetchRespuestas();
+      if (itemEnProceso?.id) await api.editarRespuestaSAC(itemEnProceso.id, { respuesta_sac: descripcion });
+      else await api.crearRespuestaSAC({ respuesta_sac: descripcion });
+      toast.success("Respuesta SAC guardada correctamente.");
+      fetchItems();
       setIsFormModalOpen(false);
       setDescripcion("");
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Error al guardar la respuesta.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    } catch { toast.error("Error al guardar la respuesta SAC."); }
+    finally { setIsSaving(false); }
+  }
 
-  const respuestasFiltradas = (Array.isArray(respuestas) ? respuestas : []).filter((r) =>
-    (r.respuesta_sac || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === "Enter") guardarItem(e as any); };
+
+  const total = items.length;
+  const activos = items.filter(i => i.activo).length;
+  const inactivos = total - activos;
 
   return (
     <div className="grid grid-cols-1 gap-6 p-4 sm:p-8 w-full">
-      
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
-        <div className="w-full min-w-0">
-          <h1 className="text-2xl font-bold text-slate-800 truncate">Gestión Respuestas SAC</h1>
-          <p className="text-slate-500 truncate">Administra las respuestas predefinidas del módulo SAC</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Gestión de Respuestas SAC</h1>
+          <p className="text-slate-500 truncate">Gestión de Respuestas SAC registradas en el sistema.</p>
         </div>
-        <Button onClick={() => abrirModalFormulario()} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto shrink-0">
+        <Button onClick={() => { setItemEnProceso(null); setDescripcion(""); setIsFormModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Nueva Respuesta
         </Button>
       </div>
 
-      <Card className="w-full overflow-hidden border-slate-200 shadow-sm">
-        <CardContent className="p-0">
-          <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col-reverse sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="relative w-full sm:max-w-md">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-              <Input 
-                placeholder="Buscar por respuesta..." 
-                className="pl-10 w-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2 text-slate-500 text-sm font-medium w-full sm:w-auto shrink-0">
-              <MessageSquare className="h-5 w-5 text-blue-500" />
-              Total Registros: {respuestas.length}
-            </div>
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card><CardContent className="p-4 flex items-center justify-between"><div className="min-w-0"><p className="text-sm text-slate-500">Total</p><h3 className="text-2xl font-bold">{total}</h3></div><MessageSquare className="h-8 w-8 text-blue-500 opacity-80"/></CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center justify-between"><div className="min-w-0"><p className="text-sm text-slate-500">Activas</p><h3 className="text-2xl font-bold">{activos}</h3></div><CheckCircle2 className="h-8 w-8 text-green-500 opacity-80"/></CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center justify-between"><div className="min-w-0"><p className="text-sm text-slate-500">Inactivas</p><h3 className="text-2xl font-bold">{inactivos}</h3></div><XCircle className="h-8 w-8 text-red-500 opacity-80"/></CardContent></Card>
+      </div>
 
+      <Card className="w-full shadow-sm">
+        <CardContent className="p-0">
+          <div className="p-4 border-b flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <Input placeholder="Buscar por respuesta..." className="pl-10 h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+            <select className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+              <option value="todos">Todos los estados</option>
+              <option value="activo">Solo Activas</option>
+              <option value="inactivo">Solo Inactivas</option>
+            </select>
+            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); }} className="h-10"><X className="h-4 w-4 mr-2"/> Limpiar</Button>
+          </div>
+          
           <div className="w-full overflow-x-auto">
             <table className="w-full min-w-[500px] text-sm text-left">
-              <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b">
+              <thead className="bg-slate-50 border-b">
                 <tr>
-                  <th className="px-6 py-4 text-center"> Respuesta</th>
+                  <th className="px-6 py-4 text-center">Respuesta</th>
+                  <th className="px-6 py-4 text-center">Estado</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {loading ? (
-                  <tr><td colSpan={2} className="text-center py-8">Cargando respuestas...</td></tr>
-                ) : respuestasFiltradas.length === 0 ? (
-                  <tr><td colSpan={2} className="text-center py-8 text-slate-500">No hay registros.</td></tr>
-                ) : (
-                  respuestasFiltradas.map((r) => (
-                    <tr key={r.id} className="bg-white hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 text-center font-medium text-slate-900 text-base">
-                        {r.respuesta_sac || "Sin contenido"}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex justify-center gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => abrirModalFormulario(r)} className="hover:bg-blue-50">
-                            <Edit2 className="h-4 w-4 text-blue-600" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleClickEliminar(r.id)} className="hover:bg-red-50">
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                {itemsFiltrados.map((i) => (
+                  <tr key={i.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-center font-medium">{i.respuesta_sac}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${i.activo ? 'bg-green-100 text-green-700' : 'bg-slate-200'}`}>
+                        {i.activo ? 'Activa' : 'Inactiva'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex justify-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => { setItemEnProceso(i); setDescripcion(i.respuesta_sac); setIsFormModalOpen(true); }}><Edit2 className="h-4 w-4 text-blue-600"/></Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setItemEnProceso(i); setIsStatusModalOpen(true); }}>
+                           {i.activo ? <PowerOff className="h-4 w-4 text-amber-600"/> : <Power className="h-4 w-6 text-green-600"/>}
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setItemEnProceso(i); setTextoConfirmacion(""); setIsDeleteModalOpen(true); }}><Trash2 className="h-4 w-4 text-red-600"/></Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Modal Formulario */}
+      {/* --- MODALES --- */}
       {isFormModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <form onSubmit={guardarRespuesta}>
-              <div className="px-6 py-4 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-900">{respuestaEnEdicion ? "Editar Respuesta" : "Nueva Respuesta SAC"}</h3>
-              </div>
-              <div className="p-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Contenido de la Respuesta</label>
-                  <Input 
-                    type="text"
-                    placeholder="Escriba la respuesta aquí..."
-                    value={descripcion}
-                    onChange={(e) => setDescripcion(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div className="bg-slate-50 px-6 py-4 flex flex-col sm:flex-row justify-end gap-3 border-t border-slate-100">
-                <Button type="button" variant="outline" onClick={() => setIsFormModalOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
-                <Button type="submit" disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto">
-                  {isSaving ? "Guardando..." : "Guardar Respuesta"}
-                </Button>
-              </div>
-            </form>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
+          <form onSubmit={guardarItem} className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">{itemEnProceso ? "Editar" : "Nueva"} Respuesta</h3>
+            <Input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} onKeyDown={handleKeyDown} autoFocus />
+            <div className="flex justify-end gap-3 mt-4">
+              <Button type="button" variant="outline" onClick={() => setIsFormModalOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={isSaving}>Guardar</Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {isStatusModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm text-center">
+            <h3 className="font-bold">Confirmar cambio</h3>
+            <p className="my-4">¿Cambiar estado de la respuesta?</p>
+            <div className="flex justify-center gap-3">
+              <Button variant="outline" onClick={() => setIsStatusModalOpen(false)}>Cancelar</Button>
+              <Button onClick={confirmarCambioEstado}>Confirmar</Button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal Eliminar */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="p-6">
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
-                <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-red-100">
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 mt-2 sm:mt-0">Confirmar Eliminación</h3>
-                  <p className="text-sm text-slate-500 mt-2">¿Estás seguro de que deseas eliminar esta respuesta?</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-slate-50 px-6 py-4 flex flex-col sm:flex-row justify-end gap-3 border-t border-slate-100">
-              <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
-              <Button variant="destructive" onClick={confirmarEliminacion} className="w-full sm:w-auto">Sí, eliminar</Button>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold">Eliminar Respuesta</h3>
+            <p className="text-sm text-slate-500 mb-4">Escribe el nombre para confirmar:</p>
+            <Input value={textoConfirmacion} onChange={(e) => setTextoConfirmacion(e.target.value)} />
+            <div className="flex justify-end gap-3 mt-4">
+              <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancelar</Button>
+              <Button variant="destructive" disabled={textoConfirmacion !== itemEnProceso.respuesta_sac} onClick={ejecutarEliminacion}>Eliminar</Button>
             </div>
           </div>
         </div>
