@@ -80,13 +80,20 @@ export const api = {
     if (!res.ok) throw new Error("Error al actualizar institución");
     return res.json();
   },
-  toggleActivoInstitucion: async (id: number, nuevoEstado: boolean) => {
+  toggleActivoInstitucion: async (id: number, activo: boolean) => {
     const res = await fetch(`${BASE_URL}/institucion_educativa/${id}/`, {
-      method: 'PATCH',
+      method: "PATCH",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ activo: nuevoEstado }),
+      body: JSON.stringify({ activo: activo }),
     });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.error("Error del servidor:", errorData); 
+      throw new Error("Error en la API");
+    }
     return res.json();
+    
   },
   eliminarInstitucion: async (id: number) => {
     const res = await fetch(`${BASE_URL}/institucion_educativa/${id}/`, {
