@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, Power, PowerOff, X, MessageSquare } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, Power, PowerOff, X, MessageSquare, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react"
 import { api } from "@/lib/api"
 import toast from "react-hot-toast"
 
@@ -13,6 +13,9 @@ export default function RespuestasSACPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filtroEstado, setFiltroEstado] = useState("todos")
+  // Estado para el ordenamiento
+  const [ordenRespuesta, setOrdenRespuesta] = useState<'asc' | 'desc' | null>(null)
+  
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
@@ -36,12 +39,25 @@ export default function RespuestasSACPage() {
 
   useEffect(() => { fetchItems() }, [])
 
+  // --- Filtrado ---
   const itemsFiltrados = items.filter(i => {
     const coincideBusqueda = (i.respuesta_sac || "").toLowerCase().includes(searchTerm.toLowerCase());
     let coincideEstado = true;
     if (filtroEstado === "activo") coincideEstado = i.activo === true;
     if (filtroEstado === "inactivo") coincideEstado = i.activo === false;
     return coincideBusqueda && coincideEstado;
+  });
+
+  // --- Ordenamiento ---
+  const itemsOrdenados = [...itemsFiltrados].sort((a, b) => {
+    if (!ordenRespuesta) return 0;
+    
+    const respA = (a.respuesta_sac || "").toLowerCase();
+    const respB = (b.respuesta_sac || "").toLowerCase();
+    
+    if (respA < respB) return ordenRespuesta === 'asc' ? -1 : 1;
+    if (respA > respB) return ordenRespuesta === 'asc' ? 1 : -1;
+    return 0;
   });
   
   const confirmarCambioEstado = async () => {
@@ -108,25 +124,41 @@ export default function RespuestasSACPage() {
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <Input placeholder="Buscar por respuesta..." className="pl-10 h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
-            <select className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+            <select className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
               <option value="todos">Todos los estados</option>
               <option value="activo">Solo Activas</option>
               <option value="inactivo">Solo Inactivas</option>
             </select>
-            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); }} className="h-10"><X className="h-4 w-4 mr-2"/> Limpiar</Button>
+            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); setOrdenRespuesta(null); }} className="h-10 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
+              <X className="h-4 w-4 mr-2"/> Limpiar
+            </Button>
           </div>
           
           <div className="w-full overflow-x-auto">
             <table className="w-full min-w-[500px] text-sm text-left">
               <thead className="bg-slate-50 border-b">
                 <tr>
-                  <th className="px-6 py-4 text-center">Respuesta</th>
+                  <th 
+                    className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 transition-colors select-none"
+                    onClick={() => {
+                      if (ordenRespuesta === 'asc') setOrdenRespuesta('desc');
+                      else if (ordenRespuesta === 'desc') setOrdenRespuesta(null);
+                      else setOrdenRespuesta('asc');
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      Respuesta
+                      {ordenRespuesta === 'asc' && <ArrowUp className="h-4 w-4 text-blue-600" />}
+                      {ordenRespuesta === 'desc' && <ArrowDown className="h-4 w-4 text-blue-600" />}
+                      {!ordenRespuesta && <ArrowUpDown className="h-4 w-4 text-slate-400" />}
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-center">Estado</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {itemsFiltrados.map((i) => (
+                {itemsOrdenados.map((i) => (
                   <tr key={i.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 text-center font-medium">{i.respuesta_sac}</td>
                     <td className="px-6 py-4 text-center">
@@ -138,7 +170,7 @@ export default function RespuestasSACPage() {
                       <div className="flex justify-center gap-1">
                         <Button variant="ghost" size="icon" onClick={() => { setItemEnProceso(i); setDescripcion(i.respuesta_sac); setIsFormModalOpen(true); }}><Edit2 className="h-4 w-4 text-blue-600"/></Button>
                         <Button variant="ghost" size="icon" onClick={() => { setItemEnProceso(i); setIsStatusModalOpen(true); }}>
-                           {i.activo ? <PowerOff className="h-4 w-4 text-amber-600"/> : <Power className="h-4 w-6 text-green-600"/>}
+                           {i.activo ? <PowerOff className="h-4 w-4 text-amber-600"/> : <Power className="h-4 w-4 text-green-600"/>}
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => { setItemEnProceso(i); setTextoConfirmacion(""); setIsDeleteModalOpen(true); }}><Trash2 className="h-4 w-4 text-red-600"/></Button>
                       </div>

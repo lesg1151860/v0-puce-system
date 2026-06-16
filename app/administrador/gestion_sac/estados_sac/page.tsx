@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, Power, PowerOff, X, Workflow } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, Power, PowerOff, X, Workflow, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react"
 import { api } from "@/lib/api"
 import toast from "react-hot-toast"
 
@@ -13,6 +13,7 @@ export default function EstadosSACPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filtroEstado, setFiltroEstado] = useState("todos")
+  const [ordenDescripcion, setOrdenDescripcion] = useState<'asc' | 'desc' | null>(null)
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
@@ -46,6 +47,17 @@ export default function EstadosSACPage() {
     return coincideBusqueda && coincideEstado;
   });
 
+  const estadosOrdenados = [...estadosFiltrados].sort((a, b) => {
+    if (!ordenDescripcion) return 0;
+    
+    const descA = (a.estado_sac || "").toLowerCase();
+    const descB = (b.estado_sac || "").toLowerCase();
+    
+    if (descA < descB) return ordenDescripcion === 'asc' ? -1 : 1;
+    if (descA > descB) return ordenDescripcion === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   const confirmarCambioEstado = async () => {
     try {
       await api.toggleActivoEstadoSAC(itemACambiar.id, !itemACambiar.activo)
@@ -69,7 +81,6 @@ export default function EstadosSACPage() {
     if (!descripcion.trim()) return toast.error("La descripción es obligatoria.");
     setIsSaving(true);
     try {
-      // Nota: Asumo que tienes crearEstadoSAC y editarEstadoSAC en api.ts
       if (itemEnEnEdicion?.id) await api.editarEstadoSAC(itemEnEnEdicion.id, { estado_sac: descripcion });
       else await api.crearEstadoSAC({ estado_sac: descripcion });
       
@@ -83,14 +94,12 @@ export default function EstadosSACPage() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === "Enter") guardarItem(e as any); };
 
-  // Cálculos para Cards
   const total = estados.length;
   const activos = estados.filter(e => e.activo).length;
   const inactivos = total - activos;
 
   return (
     <div className="grid grid-cols-1 gap-6 p-4 sm:p-8 w-full">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Gestión de Estados SAC</h1>
@@ -123,7 +132,7 @@ export default function EstadosSACPage() {
               <option value="activo">Solo Activos</option>
               <option value="inactivo">Solo Inactivos</option>
             </select>
-            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); }} className="h-10 text-slate-600 hover:bg-slate-100">
+            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); setOrdenDescripcion(null); }} className="h-10 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
               <X className="h-4 w-4 mr-2" /> Limpiar
             </Button>
           </div>
@@ -132,13 +141,27 @@ export default function EstadosSACPage() {
             <table className="w-full min-w-[500px] text-sm text-left">
               <thead className="bg-slate-50 border-b">
                 <tr>
-                  <th className="px-6 py-4 text-center">Descripción</th>
+                  <th 
+                    className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 transition-colors select-none"
+                    onClick={() => {
+                      if (ordenDescripcion === 'asc') setOrdenDescripcion('desc');
+                      else if (ordenDescripcion === 'desc') setOrdenDescripcion(null);
+                      else setOrdenDescripcion('asc');
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      Descripción
+                      {ordenDescripcion === 'asc' && <ArrowUp className="h-4 w-4 text-blue-600" />}
+                      {ordenDescripcion === 'desc' && <ArrowDown className="h-4 w-4 text-blue-600" />}
+                      {!ordenDescripcion && <ArrowUpDown className="h-4 w-4 text-slate-400" />}
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-center">Estado</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {estadosFiltrados.map((e) => (
+                {estadosOrdenados.map((e) => (
                   <tr key={e.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 text-center font-medium">{e.estado_sac}</td>
                     <td className="px-6 py-4 text-center">

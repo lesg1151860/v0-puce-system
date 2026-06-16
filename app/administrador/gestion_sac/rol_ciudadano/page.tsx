@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, Power, PowerOff, X, ListChecks } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, Power, PowerOff, X, ListChecks, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react"
 import { api } from "@/lib/api"
 import toast from "react-hot-toast"
 
@@ -13,6 +13,9 @@ export default function RolesCiudadanoPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filtroEstado, setFiltroEstado] = useState("todos") 
+  // Estado para el ordenamiento
+  const [ordenNombre, setOrdenNombre] = useState<'asc' | 'desc' | null>(null)
+
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
@@ -37,6 +40,7 @@ export default function RolesCiudadanoPage() {
 
   useEffect(() => { fetchItems() }, [])
 
+  // --- Filtrado ---
   const itemsFiltrados = items.filter(i => {
     const coincideBusqueda = (i.nombre_rol || "").toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -45,6 +49,18 @@ export default function RolesCiudadanoPage() {
     if (filtroEstado === "inactivo") coincideEstado = i.activo === false;
     
     return coincideBusqueda && coincideEstado;
+  });
+
+  // --- Ordenamiento ---
+  const itemsOrdenados = [...itemsFiltrados].sort((a, b) => {
+    if (!ordenNombre) return 0;
+    
+    const nombreA = (a.nombre_rol || "").toLowerCase();
+    const nombreB = (b.nombre_rol || "").toLowerCase();
+    
+    if (nombreA < nombreB) return ordenNombre === 'asc' ? -1 : 1;
+    if (nombreA > nombreB) return ordenNombre === 'asc' ? 1 : -1;
+    return 0;
   });
 
   const confirmarCambioEstado = async () => {
@@ -128,11 +144,7 @@ export default function RolesCiudadanoPage() {
               <option value="inactivo">Solo Inactivos</option>
             </select>
 
-            <Button 
-              variant="outline" 
-              onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); }}
-              className="h-10 text-slate-600 hover:bg-slate-100"
-            >
+            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); setOrdenNombre(null); }} className="h-10 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
               <X className="h-4 w-4 mr-2" /> Limpiar
             </Button>
           </div>
@@ -141,13 +153,27 @@ export default function RolesCiudadanoPage() {
             <table className="w-full min-w-[500px] text-sm text-left">
               <thead className="bg-slate-50 border-b">
                 <tr>
-                  <th className="px-6 py-4 text-center">Nombre</th>
+                  <th 
+                    className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 transition-colors select-none"
+                    onClick={() => {
+                      if (ordenNombre === 'asc') setOrdenNombre('desc');
+                      else if (ordenNombre === 'desc') setOrdenNombre(null);
+                      else setOrdenNombre('asc');
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      Nombre
+                      {ordenNombre === 'asc' && <ArrowUp className="h-4 w-4 text-blue-600" />}
+                      {ordenNombre === 'desc' && <ArrowDown className="h-4 w-4 text-blue-600" />}
+                      {!ordenNombre && <ArrowUpDown className="h-4 w-4 text-slate-400" />}
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-center">Estado</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {itemsFiltrados.map((i) => (
+                {itemsOrdenados.map((i) => (
                   <tr key={i.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 text-center font-medium">{i.nombre_rol}</td>
                     <td className="px-6 py-4 text-center">

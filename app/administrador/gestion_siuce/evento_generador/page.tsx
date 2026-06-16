@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Search, Edit2, Trash2, Tag, CheckCircle2, XCircle, Power, PowerOff, X, Zap } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Tag, CheckCircle2, XCircle, Power, PowerOff, X, Zap, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react"
 import { api } from "@/lib/api"
 import toast from "react-hot-toast"
 
@@ -13,6 +13,8 @@ export default function EventosGeneradoresPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filtroEstado, setFiltroEstado] = useState("todos")
+  // Estado para el ordenamiento
+  const [ordenNombre, setOrdenNombre] = useState<'asc' | 'desc' | null>(null)
   
   // Modales
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
@@ -49,6 +51,18 @@ export default function EventosGeneradoresPage() {
     return coincideBusqueda && coincideEstado;
   });
 
+  // --- Lógica: Ordenamiento ---
+  const itemsOrdenados = [...itemsFiltrados].sort((a, b) => {
+    if (!ordenNombre) return 0;
+    
+    const nombreA = (a.evento_generador || "").toLowerCase();
+    const nombreB = (b.evento_generador || "").toLowerCase();
+    
+    if (nombreA < nombreB) return ordenNombre === 'asc' ? -1 : 1;
+    if (nombreA > nombreB) return ordenNombre === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   // --- Acciones ---
   const confirmarCambioEstado = async () => {
     try {
@@ -79,7 +93,7 @@ export default function EventosGeneradoresPage() {
       fetchItems();
       setIsFormModalOpen(false);
       setDescripcion("");
-    } catch { toast.error("Error al guardar el Evento Generador."); }
+    } catch { toast.error("Error al guardar the Evento Generador."); }
     finally { setIsSaving(false); }
   }
 
@@ -113,25 +127,40 @@ export default function EventosGeneradoresPage() {
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <Input placeholder="Buscar por evento..." className="pl-10 h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
-            <select className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+            <select className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white animate-none" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
               <option value="todos">Todos los estados</option>
-              <option value="activo">Solo Activos</option>
-              <option value="inactivo">Solo Inactivos</option>
+              <option value="activo">Activos</option>
+              <option value="inactivo">Inactivos</option>
             </select>
-            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); }} className="h-10"><X className="h-4 w-4 mr-2"/> Limpiar</Button>
+            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); setOrdenNombre(null); }} className="h-10 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
+              <X className="h-4 w-4 mr-2"/> Limpiar</Button>
           </div>
           
           <div className="w-full overflow-x-auto">
             <table className="w-full min-w-[500px] text-sm text-left">
               <thead className="bg-slate-50 border-b">
                 <tr>
-                  <th className="px-6 py-4 text-center">Evento Generador</th>
+                  <th 
+                    className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 transition-colors select-none"
+                    onClick={() => {
+                      if (ordenNombre === 'asc') setOrdenNombre('desc');
+                      else if (ordenNombre === 'desc') setOrdenNombre(null);
+                      else setOrdenNombre('asc');
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      Evento Generador
+                      {ordenNombre === 'asc' && <ArrowUp className="h-4 w-4 text-blue-600" />}
+                      {ordenNombre === 'desc' && <ArrowDown className="h-4 w-4 text-blue-600" />}
+                      {!ordenNombre && <ArrowUpDown className="h-4 w-4 text-slate-400" />}
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-center">Estado</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {itemsFiltrados.map((i) => (
+                {itemsOrdenados.map((i) => (
                   <tr key={i.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 text-center font-medium">{i.evento_generador}</td>
                     <td className="px-6 py-4 text-center">

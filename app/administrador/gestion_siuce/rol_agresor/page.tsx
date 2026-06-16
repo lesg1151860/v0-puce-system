@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, Power, PowerOff, X, UserX } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, Power, PowerOff, X, UserX, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react"
 import { api } from "@/lib/api"
 import toast from "react-hot-toast"
 
@@ -13,6 +13,7 @@ export default function RolAgresorPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filtroEstado, setFiltroEstado] = useState("todos")
+  const [ordenNombre, setOrdenNombre] = useState<'asc' | 'desc' | null>(null)
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
@@ -37,11 +38,22 @@ export default function RolAgresorPage() {
   useEffect(() => { fetchItems() }, [])
   
   const itemsFiltrados = items.filter(i => {
-    const coincideBusqueda = (i.rol_agresor || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const coincideBusqueda = (i.nom_rol_agresor || "").toLowerCase().includes(searchTerm.toLowerCase());
     let coincideEstado = true;
     if (filtroEstado === "activo") coincideEstado = i.activo === true;
     if (filtroEstado === "inactivo") coincideEstado = i.activo === false;
     return coincideBusqueda && coincideEstado;
+  });
+
+  const itemsOrdenados = [...itemsFiltrados].sort((a, b) => {
+    if (!ordenNombre) return 0;
+    
+    const nombreA = (a.nom_rol_agresor || "").toLowerCase();
+    const nombreB = (b.nom_rol_agresor || "").toLowerCase();
+    
+    if (nombreA < nombreB) return ordenNombre === 'asc' ? -1 : 1;
+    if (nombreA > nombreB) return ordenNombre === 'asc' ? 1 : -1;
+    return 0;
   });
 
   const confirmarCambioEstado = async () => {
@@ -90,7 +102,7 @@ export default function RolAgresorPage() {
           <h1 className="text-2xl font-bold text-slate-800">Roles de Agresor</h1>
         </div>
         <Button onClick={() => { setItemEnProceso(null); setDescripcion(""); setIsFormModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" /> Nuevo Rol
+          <Plus className="mr-2 h-4 w-4" /> Nuevo Rol Agresor
         </Button>
       </div>
 
@@ -107,25 +119,40 @@ export default function RolAgresorPage() {
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <Input placeholder="Buscar por rol..." className="pl-10 h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
-            <select className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+            <select className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
               <option value="todos">Todos los estados</option>
-              <option value="activo">Solo Activos</option>
-              <option value="inactivo">Solo Inactivos</option>
+              <option value="activo">Activos</option>
+              <option value="inactivo">Inactivos</option>
             </select>
-            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); }} className="h-10"><X className="h-4 w-4 mr-2"/> Limpiar</Button>
+            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); setOrdenNombre(null); }} className="h-10 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
+              <X className="h-4 w-4 mr-2"/> Limpiar</Button>
           </div>
           
           <div className="w-full overflow-x-auto">
             <table className="w-full min-w-[500px] text-sm text-left">
               <thead className="bg-slate-50 border-b">
                 <tr>
-                  <th className="px-6 py-4 text-center">Rol de Agresor</th>
+                  <th 
+                    className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 transition-colors select-none"
+                    onClick={() => {
+                      if (ordenNombre === 'asc') setOrdenNombre('desc');
+                      else if (ordenNombre === 'desc') setOrdenNombre(null);
+                      else setOrdenNombre('asc');
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      Rol de Agresor
+                      {ordenNombre === 'asc' && <ArrowUp className="h-4 w-4 text-blue-600" />}
+                      {ordenNombre === 'desc' && <ArrowDown className="h-4 w-4 text-blue-600" />}
+                      {!ordenNombre && <ArrowUpDown className="h-4 w-4 text-slate-400" />}
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-center">Estado</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {itemsFiltrados.map((i) => (
+                {itemsOrdenados.map((i) => (
                   <tr key={i.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 text-center font-medium">{i.nom_rol_agresor}</td>
                     <td className="px-6 py-4 text-center">
@@ -156,7 +183,7 @@ export default function RolAgresorPage() {
           <form onSubmit={guardarItem} className="bg-white rounded-xl p-6 w-full max-w-md">
             <h3 className="text-lg font-bold mb-4">{itemEnProceso ? "Editar" : "Nuevo"} Rol</h3>
             <Input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} onKeyDown={handleKeyDown} autoFocus />
-            <div className="flex justify-end gap-3 mt-4">
+            <div className="flex justify-end gap-3 mt-6">
               <Button type="button" variant="outline" onClick={() => setIsFormModalOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={isSaving}>Guardar</Button>
             </div>
@@ -167,8 +194,8 @@ export default function RolAgresorPage() {
       {isStatusModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm text-center">
-            <h3 className="font-bold">Confirmar cambio</h3>
-            <p className="my-4">¿Cambiar estado de "{itemEnProceso.nom_rol_agresor}"?</p>
+            <h3 className="font-bold text-lg text-slate-900">Confirmar cambio</h3>
+            <p className="my-4 text-sm text-slate-500">¿Cambiar estado de "{itemEnProceso.nom_rol_agresor}"?</p>
             <div className="flex justify-center gap-3">
               <Button variant="outline" onClick={() => setIsStatusModalOpen(false)}>Cancelar</Button>
               <Button onClick={confirmarCambioEstado}>Confirmar</Button>
@@ -180,10 +207,10 @@ export default function RolAgresorPage() {
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold">Eliminar "{itemEnProceso.nom_rol_agresor}"</h3>
+            <h3 className="text-lg font-bold text-slate-900">Eliminar "{itemEnProceso.nom_rol_agresor}"</h3>
             <p className="text-sm text-slate-500 mb-4">Escribe el nombre para confirmar:</p>
             <Input value={textoConfirmacion} onChange={(e) => setTextoConfirmacion(e.target.value)} />
-            <div className="flex justify-end gap-3 mt-4">
+            <div className="flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancelar</Button>
               <Button variant="destructive" disabled={textoConfirmacion !== itemEnProceso.nom_rol_agresor} onClick={ejecutarEliminacion}>Eliminar</Button>
             </div>

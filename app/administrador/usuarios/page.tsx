@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Search, Shield, UserCheck, Users, Edit2, Trash2, AlertTriangle, X } from "lucide-react"
+import { Plus, Search, Shield, UserCheck, Users, Edit2, Trash2, AlertTriangle, X, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react"
 import { api } from "@/lib/api"
 import toast from "react-hot-toast"
 
@@ -13,8 +13,8 @@ export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filtroRol, setFiltroRol] = useState<string>("todos") // Estado para el filtro de rol
-  
+  const [filtroRol, setFiltroRol] = useState<string>("todos")
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [usuarioAEliminar, setUsuarioAEliminar] = useState<number | null>(null)
 
@@ -28,6 +28,7 @@ export default function UsuariosPage() {
       setLoading(false)
     }
   }
+
   useEffect(() => {
     fetchUsuarios()
   }, [])
@@ -56,19 +57,50 @@ export default function UsuariosPage() {
     setUsuarioAEliminar(null)
   }
 
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    } else if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
+      setSortConfig(null);
+      return;
+    }
+    setSortConfig({ key, direction });
+  };
+
   const totalUsuarios = usuarios.length
   const totalAdmin = usuarios.filter((u) => u.is_staff).length
   const totalLider = totalUsuarios - totalAdmin
+  
   const usuariosFiltrados = usuarios.filter((u) => {
-  const coincideBusqueda = `${u.first_name} ${u.last_name} ${u.username} ${u.email}`
-      .toLowerCase().includes(searchTerm.toLowerCase())
-    
-  const coincideRol = 
-      filtroRol === "todos" ? true :
-      filtroRol === "admin" ? u.is_staff : !u.is_staff
+    const coincideBusqueda = `${u.first_name} ${u.last_name} ${u.username} ${u.email}`
+        .toLowerCase().includes(searchTerm.toLowerCase())
+      
+    const coincideRol = 
+        filtroRol === "todos" ? true :
+        filtroRol === "admin" ? u.is_staff : !u.is_staff
 
     return coincideBusqueda && coincideRol
   })
+
+  const usuariosOrdenados = [...usuariosFiltrados].sort((a, b) => {
+    if (!sortConfig) return 0;
+    
+    let valorA = '';
+    let valorB = '';
+
+    if (sortConfig.key === 'nombre') {
+      valorA = `${a.first_name} ${a.last_name}`.toLowerCase();
+      valorB = `${b.first_name} ${b.last_name}`.toLowerCase();
+    } else if (sortConfig.key === 'usuario') {
+      valorA = (a.username || '').toLowerCase();
+      valorB = (b.username || '').toLowerCase();
+    }
+
+    if (valorA < valorB) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (valorA > valorB) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   return (
     <div className="grid grid-cols-1 gap-6 p-4 sm:p-8 w-full">
@@ -76,7 +108,7 @@ export default function UsuariosPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
         <div className="w-full min-w-0">
           <h1 className="text-2xl font-bold text-slate-800 truncate">Gestión de Usuarios</h1>
-          <p className="text-slate-500 truncate">Administra los accesos al sistema</p>
+          <p className="text-slate-500 truncate">Administra los usuarios y sus accesos al sistema</p>
         </div>
         <Link href="/administrador/usuarios/nuevo_usuario" className="w-full sm:w-auto shrink-0">
           <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
@@ -124,7 +156,7 @@ export default function UsuariosPage() {
               </select>
               <Button 
                 variant="outline" 
-                onClick={() => { setSearchTerm(""); setFiltroRol("todos"); }}
+                onClick={() => { setSearchTerm(""); setFiltroRol("todos"); setSortConfig(null); }}
                 className="h-10 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
                 <X className="h-4 w-4 mr-2" /> Limpiar
               </Button>
@@ -132,10 +164,31 @@ export default function UsuariosPage() {
 
           <div className="w-full overflow-x-auto">
             <table className="w-full min-w-[800px] text-sm text-left">
-              <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b">
+              {/* Encabezado actualizado sin 'uppercase' y con 'font-medium' */}
+              <thead className="bg-slate-50 text-slate-700 font-medium border-b">
                 <tr>
-                  <th className="px-6 py-4 text-center">Nombre Completo</th>
-                  <th className="px-6 py-4 text-center">Usuario</th>
+                  <th 
+                    className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 transition-colors select-none"
+                    onClick={() => requestSort('nombre')}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      Nombres Completos
+                      {sortConfig?.key === 'nombre' ? (
+                        sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 text-blue-600" /> : <ArrowDown className="h-4 w-4 text-blue-600" />
+                      ) : <ArrowUpDown className="h-4 w-4 text-slate-400" />}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 transition-colors select-none"
+                    onClick={() => requestSort('usuario')}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      Usuario
+                      {sortConfig?.key === 'usuario' ? (
+                        sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 text-blue-600" /> : <ArrowDown className="h-4 w-4 text-blue-600" />
+                      ) : <ArrowUpDown className="h-4 w-4 text-slate-400" />}
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-center">Email</th>
                   <th className="px-6 py-4 text-center">Rol</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
@@ -144,10 +197,10 @@ export default function UsuariosPage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr><td colSpan={5} className="text-center py-8">Cargando...</td></tr>
-                ) : usuariosFiltrados.length === 0 ? (
+                ) : usuariosOrdenados.length === 0 ? (
                   <tr><td colSpan={5} className="text-center py-8 text-slate-500">No se encontraron usuarios.</td></tr>
                 ) : (
-                  usuariosFiltrados.map((usuario) => (
+                  usuariosOrdenados.map((usuario) => (
                     <tr key={usuario.id} className="bg-white hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 font-medium text-slate-900 text-center">{usuario.first_name} {usuario.last_name}</td>
                       <td className="px-6 py-4 text-center text-slate-600">{usuario.username}</td>
