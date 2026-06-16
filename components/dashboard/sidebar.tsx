@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { LogOut, Menu, X, LayoutDashboard, FileText, FileSpreadsheet, Users, Settings, Building, ChevronDown, ChevronRight, Circle } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -73,8 +73,33 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [openMenu, setOpenMenu] = useState<string | null>(null) 
-  
+  const [localCollapsed, setLocalCollapsed] = useState(isCollapsed)
   const links = type === "lider" ? liderLinks : adminLinks
+
+  useEffect(() => {
+    setLocalCollapsed(isCollapsed)
+  }, [isCollapsed])
+
+  useEffect(() => {
+    const handleToggle = () => {
+      setLocalCollapsed((prev) => {
+        const isNowCollapsed = !prev;
+        const mainContent = document.querySelector('main');
+        if (mainContent) {
+          if (isNowCollapsed) {
+            mainContent.classList.remove('lg:pl-64');
+            mainContent.classList.add('lg:pl-20');
+          } else {
+            mainContent.classList.remove('lg:pl-20');
+            mainContent.classList.add('lg:pl-64');
+          }
+        }
+        return isNowCollapsed;
+      });
+    }
+    window.addEventListener("toggle-sidebar", handleToggle)
+    return () => window.removeEventListener("toggle-sidebar", handleToggle)
+  }, [])
 
   const handleLogout = () => {
     document.cookie = "access_token=; path=/; max-age=0"
@@ -101,17 +126,17 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
     <div className="flex h-full flex-col">
       <div className={cn(
         "flex h-16 shrink-0 items-center border-b border-slate-200 transition-all duration-300",
-        isCollapsed ? "justify-center px-0" : "gap-3 px-4"
+        localCollapsed ? "justify-center px-0" : "gap-3 px-4"
       )}>
         <Image
           src="/images/logo-puce.png"
           alt="Logo PUCE"
-          width={isCollapsed ? 40 : 48}
-          height={isCollapsed ? 40 : 48}
+          width={localCollapsed ? 40 : 48}
+          height={localCollapsed ? 40 : 48}
           className="rounded-full shrink-0 transition-all duration-300"
         />
-        {!isCollapsed && (
-          <div className="flex flex-col whitespace-nowrap overflow-hidden">
+        {!localCollapsed && (
+          <div className="flex flex-col whitespace-nowrap overflow-hidden animate-none">
             <span className="text-lg font-bold text-slate-900 leading-tight">PUCE</span>
             <span className="text-[10px] text-slate-500 leading-tight">Plataforma Unificada de</span>
             <span className="text-[10px] text-slate-500 leading-tight">Convivencia Escolar</span>
@@ -121,7 +146,7 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
 
       <nav className={cn(
         "flex-1 space-y-1 px-3 py-4",
-        isCollapsed ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
+        localCollapsed ? "overflow-visible" : "overflow-y-auto overflow-x-hidden"
       )}>
         {links.map((item) => {
           const active = isItemActive(item)
@@ -130,31 +155,32 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
             const isOpen = openMenu === item.name
             
             return (
-              <div key={item.name} className={cn("flex flex-col space-y-1", isCollapsed && "relative group")}>
+              <div key={item.name} className={cn("flex flex-col space-y-1", localCollapsed && "relative group")}>
                 
                 <button
+                  type="button"
                   onClick={() => toggleMenu(item.name)}
                   className={cn(
                     "flex items-center justify-between rounded-lg py-2.5 text-sm font-medium transition-all duration-200 w-full",
-                    isCollapsed ? "justify-center px-0" : "px-3",
+                    localCollapsed ? "justify-center px-0" : "px-3",
                     active 
                       ? "bg-blue-600 text-white shadow-sm" 
                       : "text-slate-700 hover:bg-blue-600 hover:text-white group-hover:bg-blue-600 group-hover:text-white"
                   )}
                 >
-                  <div className={cn("flex items-center gap-3", isCollapsed && "justify-center w-full")}>
+                  <div className={cn("flex items-center gap-3", localCollapsed && "justify-center w-full")}>
                     <item.icon className={cn(
                       "h-5 w-5 shrink-0 transition-colors", 
                       active ? "text-white" : "text-slate-500 group-hover:text-white"
                     )} />
-                    {!isCollapsed && <span>{item.name}</span>}
+                    {!localCollapsed && <span>{item.name}</span>}
                   </div>
-                  {!isCollapsed && (
+                  {!localCollapsed && (
                     isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
                   )}
                 </button>
 
-                {!isCollapsed && isOpen && (
+                {!localCollapsed && isOpen && (
                   <div className="mt-1 flex flex-col bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
                     {item.subItems.map((sub) => {
                       const subActive = pathname === sub.href
@@ -178,8 +204,8 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
                   </div>
                 )}
 
-                {isCollapsed && (
-                  <div className="absolute left-full top-0 pl-2 hidden group-hover:block z-[999]">
+                {localCollapsed && (
+                  <div className="absolute left-full top-0 ml-2 hidden group-hover:block z-[999]">
                     <div className="w-60 rounded-md bg-white shadow-xl border border-slate-200 overflow-hidden">
                       <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
                         <span className="text-sm font-bold text-slate-900">{item.name}</span>
@@ -214,13 +240,14 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
                 setOpenMenu(null);
               }}
               className={cn(
-                "group flex items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200",
-                isCollapsed ? "justify-center px-0" : "gap-3 px-3",
+                "group relative flex items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200",
+                localCollapsed ? "justify-center px-0" : "gap-3 px-3",
                 active ? "bg-blue-600 text-white" : "text-slate-700 hover:bg-blue-600 hover:text-white"
               )}
             >
               <item.icon className={cn("h-5 w-5 shrink-0 transition-colors", active ? "text-white" : "text-slate-500 group-hover:text-white")} />
-              {!isCollapsed && (
+              
+              {!localCollapsed && (
                 <div className="flex flex-col whitespace-nowrap overflow-hidden">
                   <span>{item.name}</span>
                   {item.description && (
@@ -230,16 +257,43 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
                   )}
                 </div>
               )}
+              {localCollapsed && (
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 hidden group-hover:block z-[1000] pointer-events-none">
+                  <div className="bg-slate-800 text-white text-[13px] px-3 py-1.5 rounded-md shadow-md flex flex-col whitespace-nowrap">
+                    <span className="font-semibold">{item.name}</span>
+                    {item.description && (
+                      <span className="text-[10px] text-slate-300 font-normal mt-0.5">
+                        {item.description}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </Link>
           )
         })}
       </nav>
-      
-      <div className="p-3 shrink-0">
-        <Button variant="ghost" onClick={handleLogout} className={cn("w-full text-slate-700 hover:bg-red-50 hover:text-red-700 transition-all", isCollapsed ? "justify-center px-0" : "justify-start px-3")}>
-          <LogOut className={cn("h-5 w-5 shrink-0", !isCollapsed && "mr-3")} />
-          {!isCollapsed && <span>Cerrar Sesión</span>}
+
+      <div className="p-3 shrink-0 relative group">
+        <Button 
+          variant="ghost" 
+          onClick={handleLogout} 
+          className={cn(
+            "w-full text-slate-700 hover:bg-red-50 hover:text-red-700 transition-all", 
+            localCollapsed ? "justify-center px-0" : "justify-start px-3"
+          )}
+        >
+          <LogOut className={cn("h-5 w-5 shrink-0", !localCollapsed && "mr-3")} />
+          {!localCollapsed && <span>Cerrar Sesión</span>}
         </Button>
+
+        {localCollapsed && (
+          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-0 hidden group-hover:block z-[1000] pointer-events-none">
+            <div className="bg-slate-800 text-white text-[13px] font-semibold px-3 py-1.5 rounded-md shadow-md whitespace-nowrap">
+              Cerrar Sesión
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -253,7 +307,7 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
       </div>
       {mobileMenuOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMobileMenuOpen(false)} />}
       <aside className={cn("fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white border-r border-slate-200 transition-transform lg:hidden", mobileMenuOpen ? "translate-x-0" : "-translate-x-full")}>{sidebarContent}</aside>
-      <aside className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white transition-all duration-300 ease-in-out z-20 ${isCollapsed ? 'w-20' : 'w-64'}`}>{sidebarContent}</aside>
+      <aside className={cn("hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white transition-all duration-300 ease-in-out z-20", localCollapsed ? 'w-20' : 'w-64')}>{sidebarContent}</aside>
     </>
   )
 }
