@@ -53,17 +53,17 @@ export const api = {
 
   // --- CRUD INSTITUCIONES EDUCATIVAS ---
   obtenerInstituciones: async () => {
-    const res = await fetch(`${BASE_URL}/instituciones/`, { headers: getAuthHeaders() });
+    const res = await fetch(`${BASE_URL}/institucion_educativa/`, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error("Error al obtener instituciones");
     return res.json();
   },
   obtenerInstitucionById: async (id: string) => {
-    const res = await fetch(`${BASE_URL}/instituciones/${id}/`, { headers: getAuthHeaders() });
+    const res = await fetch(`${BASE_URL}/institucion_educativa/${id}/`, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error("Error al obtener la institución");
     return res.json();
   },
   crearInstitucion: async (data: any) => {
-    const res = await fetch(`${BASE_URL}/instituciones/`, {
+    const res = await fetch(`${BASE_URL}/institucion_educativa/`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -72,7 +72,7 @@ export const api = {
     return res.json();
   },
   editarInstitucion: async (id: string, data: any) => {
-    const res = await fetch(`${BASE_URL}/instituciones/${id}/`, {
+    const res = await fetch(`${BASE_URL}/institucion_educativa/${id}/`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -81,7 +81,7 @@ export const api = {
     return res.json();
   },
   toggleActivoInstitucion: async (id: number, nuevoEstado: boolean) => {
-    const res = await fetch(`${BASE_URL}/instituciones/${id}/`, {
+    const res = await fetch(`${BASE_URL}/institucion_educativa/${id}/`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify({ activo: nuevoEstado }),
@@ -89,7 +89,7 @@ export const api = {
     return res.json();
   },
   eliminarInstitucion: async (id: number) => {
-    const res = await fetch(`${BASE_URL}/instituciones/${id}/`, {
+    const res = await fetch(`${BASE_URL}/institucion_educativa/${id}/`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
@@ -129,7 +129,6 @@ export const api = {
     });
     if (!res.ok) {
       const errorData = await res.json();
-      // Extraemos el error del campo nombre_rol si existe
       const mensaje = errorData.nombre_rol?.[0] || "Error al actualizar el rol de ciudadano";
       throw new Error(mensaje);
     }
