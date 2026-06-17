@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
-import { Plus, Pencil, Trash2, Search, Building2, School, Lock, X, ArrowUpDown, ArrowDown, ArrowUp, Power, PowerOff } from "lucide-react"
+import { Plus, Pencil, Trash2, Search, Building2, School, Lock, X, ArrowUpDown, ArrowDown, ArrowUp, Power, PowerOff, CheckCircle2, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -118,9 +118,12 @@ export default function InstitucionesAdminPage() {
     return 0;
   });
 
+  // Métricas calculadas analíticamente
   const totalInst = instituciones.length
   const publicas = instituciones.filter((i: any) => i.sector === "PUBLICA").length
   const privadas = instituciones.filter((i: any) => i.sector === "PRIVADA").length
+  const activas = instituciones.filter((i: any) => i.activo !== false).length
+  const inactivas = instituciones.filter((i: any) => i.activo === false).length
 
   return (
     <div className="grid grid-cols-1 gap-6 p-4 sm:p-8 w-full">
@@ -135,6 +138,7 @@ export default function InstitucionesAdminPage() {
         </Button>
       </div>
 
+      {/* Fila Superior de Tarjetas */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
           <div className="min-w-0"><p className="text-sm font-medium text-slate-500 truncate">Total Registradas</p><h3 className="text-2xl sm:text-3xl font-bold truncate">{isLoading ? "-" : totalInst}</h3></div>
@@ -147,6 +151,25 @@ export default function InstitucionesAdminPage() {
         <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
           <div className="min-w-0"><p className="text-sm font-medium text-slate-500 truncate">Sector Privado</p><h3 className="text-2xl sm:text-3xl font-bold text-orange-600 truncate">{isLoading ? "-" : privadas}</h3></div>
           <Lock className="h-8 w-8 text-orange-500 shrink-0" />
+        </CardContent></Card>
+      </div>
+
+      {/* NUEVO: Fila Inferior de Tarjetas (Estados Activo / Inactivo) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full -mt-2">
+        <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-500 truncate">Instituciones Activas</p>
+            <h3 className="text-2xl sm:text-3xl font-bold text-emerald-600 truncate">{isLoading ? "-" : activas}</h3>
+          </div>
+          <CheckCircle2 className="h-8 w-8 text-emerald-500 shrink-0" />
+        </CardContent></Card>
+        
+        <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-500 truncate">Instituciones Inactivas</p>
+            <h3 className="text-2xl sm:text-3xl font-bold text-amber-600 truncate">{isLoading ? "-" : inactivas}</h3>
+          </div>
+          <XCircle className="h-8 w-8 text-red-500 shrink-0" />
         </CardContent></Card>
       </div>
 
