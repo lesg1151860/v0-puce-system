@@ -3,11 +3,20 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
-import { Plus, Pencil, Trash2, Search, Building2, School, Lock, X, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react"
+import { Plus, Pencil, Trash2, Search, Building2, School, Lock, X, ArrowUpDown, ArrowDown, ArrowUp, Power, PowerOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import toast from "react-hot-toast"
+
+const getAuthToken = () => {
+  if (typeof window === "undefined") return null
+  const cookieToken = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("access_token="))
+    ?.split("=")[1]
+  return cookieToken || localStorage.getItem("access_token")
+}
 
 export default function InstitucionesAdminPage() {
   const router = useRouter()
@@ -17,6 +26,11 @@ export default function InstitucionesAdminPage() {
   const [filtroSector, setFiltroSector] = useState<string>("todos")
   const [ordenNombre, setOrdenNombre] = useState<'asc' | 'desc' | null>(null)
   
+  // Estados para el modal de cambio de estado simplificado
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const [instAEditarEstado, setInstAEditarEstado] = useState<any | null>(null)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+
   useEffect(() => {
     cargarInstituciones()
   }, [])
@@ -45,12 +59,48 @@ export default function InstitucionesAdminPage() {
     }
   }
 
+  const handleClickCambiarEstado = (inst: any) => {
+    setInstAEditarEstado(inst)
+    setIsStatusModalOpen(true)
+  }
+
+  const confirmarCambioEstado = async () => {
+    if (!instAEditarEstado) return
+    setIsUpdatingStatus(true)
+    const token = getAuthToken()
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/institucion_educativa/${instAEditarEstado.id}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          activo: !instAEditarEstado.activo
+        })
+      })
+
+      if (response.ok) {
+        toast.success("Estado actualizado.")
+        cargarInstituciones()
+      } else {
+        toast.error("Error al actualizar.")
+      }
+    } catch (error) {
+      toast.error("Error al actualizar.")
+    } finally {
+      setIsUpdatingStatus(false)
+      setIsStatusModalOpen(false)
+      setInstAEditarEstado(null)
+    }
+  }
+
   const institucionesFiltradas = instituciones.filter(inst => {
     const termLower = searchTerm.toLowerCase()
     const nombreLower = (inst.nombre || "").toLowerCase()
     const rectorLower = (inst.rector || "").toLowerCase()
     
-    // Coincide si el término está en el nombre de la IE O en el nombre del rector
     const coincideBusqueda = nombreLower.includes(termLower) || rectorLower.includes(termLower)
     const coincideSector = filtroSector === "todos" ? true : inst.sector === filtroSector
     
@@ -102,7 +152,6 @@ export default function InstitucionesAdminPage() {
 
       <Card className="w-full overflow-hidden border-slate-200 shadow-sm">
         <CardContent className="p-0">
-          {/* Barra de herramientas */}
           <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -142,21 +191,22 @@ export default function InstitucionesAdminPage() {
                   <th className="px-6 py-4 text-center">Sector</th>
                   <th className="px-6 py-4 text-center">Rector</th>
                   <th className="px-6 py-4 text-center">Número de Contacto</th>
+                  <th className="px-6 py-4 text-center">Estado</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
-                  <tr><td colSpan={5} className="text-center py-10 text-slate-500">Cargando directorio...</td></tr>
+                  <tr><td colSpan={6} className="text-center py-10 text-slate-500">Cargando directorio...</td></tr>
                 ) : institucionesOrdenadas.length === 0 ? (
-                  <tr><td colSpan={5} className="text-center py-10 text-slate-500">No se encontraron instituciones.</td></tr>
+                  <tr><td colSpan={6} className="text-center py-10 text-slate-500">No se encontraron instituciones.</td></tr>
                 ) : (
                   institucionesOrdenadas.map((inst) => (
                     <tr key={inst.id} className="hover:bg-slate-50 transition-colors bg-white">
                       <td className="px-6 py-4 font-medium text-slate-900 text-center">{inst.nombre}</td>
                       <td className="px-6 py-4 text-center">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${inst.sector === 'PUBLICA' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`}>
-                          {inst.sector}
+                          {inst.sector === 'PUBLICA' ? 'Público' : inst.sector === 'PRIVADA' ? 'Privado' : inst.sector}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center text-slate-600">{inst.rector || "No asignado"}</td>
@@ -164,9 +214,17 @@ export default function InstitucionesAdminPage() {
                         {inst.num_contacto || "No definido"}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <div className="flex justify-center gap-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${inst.activo !== false ? 'bg-green-100 text-green-700' : 'bg-slate-200'}`}>
+                          {inst.activo !== false ? "Activa" : "Inactiva"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex justify-center gap-1">
                           <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-800 hover:bg-blue-50" onClick={() => router.push(`/administrador/instituciones/editar_institucion/${inst.id}`)}>
                             <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleClickCambiarEstado(inst)}>
+                            {inst.activo !== false ? <PowerOff className="h-4 w-4 text-amber-600"/> : <Power className="h-4 w-4 text-green-600"/>}
                           </Button>
                           <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-800 hover:bg-red-50" onClick={() => handleDelete(inst.id)}>
                             <Trash2 className="h-4 w-4" />
@@ -181,6 +239,29 @@ export default function InstitucionesAdminPage() {
           </div>
         </CardContent>
       </Card>
+
+      {isStatusModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm text-center">
+            <h3 className="font-bold text-slate-900">Confirmar cambio</h3>
+            <p className="my-4 text-sm text-slate-600">
+              ¿Cambiar estado de {instAEditarEstado?.nombre}?
+            </p>
+            <div className="flex justify-center gap-3">
+              <Button variant="outline" onClick={() => setIsStatusModalOpen(false)} disabled={isUpdatingStatus}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={confirmarCambioEstado} 
+                disabled={isUpdatingStatus}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isUpdatingStatus ? "Guardando..." : "Confirmar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
