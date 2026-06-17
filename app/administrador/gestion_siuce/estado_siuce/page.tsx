@@ -129,7 +129,7 @@ export default function EstadoSIUCEPage() {
               <option value="activo">Activos</option>
               <option value="inactivo">Inactivos</option>
             </select>
-            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); setOrdenDescripcion(null); }} className="h-10 text-slate-600 hover:bg-slate-100 transition-colors">
+            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroEstado("todos"); setOrdenDescripcion(null); }} className="h-10 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
               <X className="h-4 w-4 mr-2"/> Limpiar</Button>
           </div>
           
