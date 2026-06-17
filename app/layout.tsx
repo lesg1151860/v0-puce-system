@@ -1,10 +1,7 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
+import { Toaster } from 'react-hot-toast'
+import Footer from '@/components/Footer'
 import './globals.css'
-
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'SICE - Sistema de Información de Convivencia Escolar',
@@ -35,10 +32,16 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased">
-        {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+    <html lang="es">
+      <body className="font-sans antialiased flex flex-col min-h-screen bg-gray-50">
+        <main className="flex-grow">
+          {children}
+        </main>
+        <Footer />
+        
+        {/* Toaster de forma global */}
+        <Toaster position="top-right" reverseOrder={false} />
+        
       </body>
     </html>
   )

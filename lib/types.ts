@@ -2,7 +2,7 @@
 
 // Estados de los casos
 export type EstadoCaso = "Nuevo" | "En Seguimiento" | "Resuelto"
-export type EstadoSIUCE = "EN PROGRESO" | "PENDIENTE" | "TERMINADO"
+export type EstadoSIUCE = "En Progreso" | "Pendiente" | "Terminado"
 
 // Roles del ciudadano que reporta (SAC)
 export type RolCiudadano =
@@ -76,7 +76,7 @@ export type RolAgresor =
 export type SACRespuestaEstado = "ENVIADA" | "NO" | "SÍ"
 
 // Estado SAC
-export type EstadoSAC = "EN SEGUIMIENTO" | "TERMINADO"
+export type EstadoSAC = "En Seguimiento" | "Terminado"
 
 // Situación SAC (clasificación según gravedad)
 export type SituacionSAC = "Tipo 1" | "Tipo 2" | "Tipo 3"
@@ -159,12 +159,13 @@ export interface CasoSIUCE {
 }
 
 // Roles del sistema
-export type RolUsuario = "ADMINISTRADOR" | "LIDER"
+export type RolUsuario = "ADMINISTRADOR" | "LIDER" | "USUARIO";
 
 // Interfaz de usuario
 export interface Usuario {
+  id: number
+  nombre: string
   email: string
-  name: string
   rol: RolUsuario
 }
 
@@ -190,3 +191,4 @@ export interface DashboardStats {
   casosSAC: number
   casosSIUCE: number
 }
+

@@ -1,416 +1,290 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { api } from "@/lib/api"
+import { Plus, Pencil, Trash2, Search, Building2, School, Lock, X, ArrowUpDown, ArrowDown, ArrowUp, Power, PowerOff, CheckCircle2, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Plus, Pencil, Trash2, Building2, Search } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import toast from "react-hot-toast"
 
-// Tipo para Institucion Educativa
-interface InstitucionEducativa {
-  id: number
-  nombre: string
-  sector: "PUBLICA" | "PRIVADA"
+const getAuthToken = () => {
+  if (typeof window === "undefined") return null
+  const cookieToken = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("access_token="))
+    ?.split("=")[1]
+  return cookieToken || localStorage.getItem("access_token")
 }
 
-// Clave para localStorage
-const STORAGE_KEY = "puce_instituciones_educativas"
-
-// Funciones de almacenamiento local
-function getInstituciones(): InstitucionEducativa[] {
-  if (typeof window === "undefined") return []
-  const data = localStorage.getItem(STORAGE_KEY)
-  return data ? JSON.parse(data) : []
-}
-
-function saveInstituciones(instituciones: InstitucionEducativa[]): void {
-  if (typeof window === "undefined") return
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(instituciones))
-}
-
-function getNextId(): number {
-  const instituciones = getInstituciones()
-  if (instituciones.length === 0) return 1
-  return Math.max(...instituciones.map((i) => i.id)) + 1
-}
-
-export default function InstitucionesPage() {
-  const [instituciones, setInstituciones] = useState<InstitucionEducativa[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
+export default function InstitucionesAdminPage() {
+  const router = useRouter()
+  const [instituciones, setInstituciones] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filtroSector, setFiltroSector] = useState<string>("todos")
+  const [ordenNombre, setOrdenNombre] = useState<'asc' | 'desc' | null>(null)
+  
+  // Estados para el modal de cambio de estado simplificado
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const [instAEditarEstado, setInstAEditarEstado] = useState<any | null>(null)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
 
-  // Estados para modal de crear/editar
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingInstitucion, setEditingInstitucion] = useState<InstitucionEducativa | null>(null)
-  const [formNombre, setFormNombre] = useState("")
-  const [formSector, setFormSector] = useState<"PUBLICA" | "PRIVADA">("PUBLICA")
-  const [formError, setFormError] = useState("")
-
-  // Estado para confirmacion de eliminacion
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [institucionToDelete, setInstitucionToDelete] = useState<InstitucionEducativa | null>(null)
-
-  // Cargar instituciones al montar
   useEffect(() => {
-    const data = getInstituciones()
-    setInstituciones(data)
-    setIsLoading(false)
+    cargarInstituciones()
   }, [])
 
-  // Filtrar instituciones
-  const filteredInstituciones = instituciones.filter((inst) =>
-    inst.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  // Abrir modal para crear
-  const handleCreate = () => {
-    setEditingInstitucion(null)
-    setFormNombre("")
-    setFormSector("PUBLICA")
-    setFormError("")
-    setIsDialogOpen(true)
+  const cargarInstituciones = async () => {
+    try {
+      setIsLoading(true)
+      const data = await api.obtenerInstituciones()
+      setInstituciones(data)
+    } catch (error) {
+      console.error("Error al cargar instituciones:", error)
+      toast.error("Error al cargar datos")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  // Abrir modal para editar
-  const handleEdit = (institucion: InstitucionEducativa) => {
-    setEditingInstitucion(institucion)
-    setFormNombre(institucion.nombre)
-    setFormSector(institucion.sector)
-    setFormError("")
-    setIsDialogOpen(true)
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("¿Estás seguro de eliminar esta institución?")) return
+    try {
+      await api.eliminarInstitucion(id)
+      toast.success("Institución eliminada exitosamente")
+      cargarInstituciones()
+    } catch (error) {
+      toast.error("Error al eliminar la institución")
+    }
   }
 
-  // Guardar institucion (crear o editar)
-  const handleSave = () => {
-    // Validar nombre
-    if (!formNombre.trim()) {
-      setFormError("El nombre oficial es obligatorio")
-      return
-    }
+  const handleClickCambiarEstado = (inst: any) => {
+    setInstAEditarEstado(inst)
+    setIsStatusModalOpen(true)
+  }
 
-    // Verificar nombre duplicado
-    const nombreExiste = instituciones.some(
-      (inst) =>
-        inst.nombre.toLowerCase() === formNombre.trim().toLowerCase() &&
-        inst.id !== editingInstitucion?.id
-    )
-    if (nombreExiste) {
-      setFormError("Ya existe una institucion con este nombre")
-      return
-    }
+  const confirmarCambioEstado = async () => {
+    if (!instAEditarEstado) return
+    setIsUpdatingStatus(true)
+    const token = getAuthToken()
 
-    if (editingInstitucion) {
-      // Editar existente
-      const updated = instituciones.map((inst) =>
-        inst.id === editingInstitucion.id
-          ? { ...inst, nombre: formNombre.trim().toUpperCase(), sector: formSector }
-          : inst
-      )
-      setInstituciones(updated)
-      saveInstituciones(updated)
-    } else {
-      // Crear nueva
-      const newInstitucion: InstitucionEducativa = {
-        id: getNextId(),
-        nombre: formNombre.trim().toUpperCase(),
-        sector: formSector,
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/institucion_educativa/${instAEditarEstado.id}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          activo: !instAEditarEstado.activo
+        })
+      })
+
+      if (response.ok) {
+        toast.success("Estado actualizado.")
+        cargarInstituciones()
+      } else {
+        toast.error("Error al actualizar.")
       }
-      const updated = [...instituciones, newInstitucion]
-      setInstituciones(updated)
-      saveInstituciones(updated)
+    } catch (error) {
+      toast.error("Error al actualizar.")
+    } finally {
+      setIsUpdatingStatus(false)
+      setIsStatusModalOpen(false)
+      setInstAEditarEstado(null)
     }
-
-    setIsDialogOpen(false)
-    setFormNombre("")
-    setFormSector("PUBLICA")
-    setFormError("")
-    setEditingInstitucion(null)
   }
 
-  // Confirmar eliminacion
-  const handleDeleteConfirm = (institucion: InstitucionEducativa) => {
-    setInstitucionToDelete(institucion)
-    setDeleteConfirmOpen(true)
-  }
+  const institucionesFiltradas = instituciones.filter(inst => {
+    const termLower = searchTerm.toLowerCase()
+    const nombreLower = (inst.nombre || "").toLowerCase()
+    const rectorLower = (inst.rector || "").toLowerCase()
+    
+    const coincideBusqueda = nombreLower.includes(termLower) || rectorLower.includes(termLower)
+    const coincideSector = filtroSector === "todos" ? true : inst.sector === filtroSector
+    
+    return coincideBusqueda && coincideSector
+  })
 
-  // Eliminar institucion
-  const handleDelete = () => {
-    if (!institucionToDelete) return
+  const institucionesOrdenadas = [...institucionesFiltradas].sort((a, b) => {
+    if (!ordenNombre) return 0;
+    
+    const nombreA = (a.nombre || "").toLowerCase();
+    const nombreB = (b.nombre || "").toLowerCase();
+    
+    if (nombreA < nombreB) return ordenNombre === 'asc' ? -1 : 1;
+    if (nombreA > nombreB) return ordenNombre === 'asc' ? 1 : -1;
+    return 0;
+  });
 
-    const updated = instituciones.filter((inst) => inst.id !== institucionToDelete.id)
-    setInstituciones(updated)
-    saveInstituciones(updated)
-
-    setDeleteConfirmOpen(false)
-    setInstitucionToDelete(null)
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
-      </div>
-    )
-  }
+  // Métricas calculadas analíticamente
+  const totalInst = instituciones.length
+  const publicas = instituciones.filter((i: any) => i.sector === "PUBLICA").length
+  const privadas = instituciones.filter((i: any) => i.sector === "PRIVADA").length
+  const activas = instituciones.filter((i: any) => i.activo !== false).length
+  const inactivas = instituciones.filter((i: any) => i.activo === false).length
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Instituciones Educativas</h1>
-          <p className="text-slate-600">
-            Gestiona las instituciones educativas registradas en el sistema
-          </p>
+    <div className="grid grid-cols-1 gap-6 p-4 sm:p-8 w-full">
+      
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+        <div className="w-full min-w-0">
+          <h1 className="text-2xl font-bold text-slate-900 truncate">Instituciones Educativas</h1>
+          <p className="text-slate-500 truncate">Gestión de Instituciones registradas en el sistema.</p>
         </div>
-        <Button onClick={handleCreate} className="bg-orange-600 hover:bg-orange-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Institucion
+        <Button onClick={() => router.push("/administrador/instituciones/nueva_institucion")} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto shrink-0">
+          <Plus className="h-4 w-4 mr-2" /> Nueva Institución
         </Button>
       </div>
 
-      {/* Estadisticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Instituciones</CardTitle>
-            <Building2 className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{instituciones.length}</div>
-            <p className="text-xs text-slate-500">Registradas en el sistema</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sector Publico</CardTitle>
-            <Building2 className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {instituciones.filter((i) => i.sector === "PUBLICA").length}
-            </div>
-            <p className="text-xs text-slate-500">Instituciones publicas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sector Privado</CardTitle>
-            <Building2 className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {instituciones.filter((i) => i.sector === "PRIVADA").length}
-            </div>
-            <p className="text-xs text-slate-500">Instituciones privadas</p>
-          </CardContent>
-        </Card>
+      {/* Fila Superior de Tarjetas */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+        <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0"><p className="text-sm font-medium text-slate-500 truncate">Total Registradas</p><h3 className="text-2xl sm:text-3xl font-bold truncate">{isLoading ? "-" : totalInst}</h3></div>
+          <Building2 className="h-8 w-8 text-slate-400 shrink-0" />
+        </CardContent></Card>
+        <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0"><p className="text-sm font-medium text-slate-500 truncate">Sector Público</p><h3 className="text-2xl sm:text-3xl font-bold text-blue-600 truncate">{isLoading ? "-" : publicas}</h3></div>
+          <School className="h-8 w-8 text-blue-500 shrink-0" />
+        </CardContent></Card>
+        <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0"><p className="text-sm font-medium text-slate-500 truncate">Sector Privado</p><h3 className="text-2xl sm:text-3xl font-bold text-orange-600 truncate">{isLoading ? "-" : privadas}</h3></div>
+          <Lock className="h-8 w-8 text-orange-500 shrink-0" />
+        </CardContent></Card>
       </div>
 
-      {/* Tabla de instituciones */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Listado de Instituciones</CardTitle>
-          <CardDescription>
-            Instituciones educativas disponibles para asignar en casos SAC y SIUCE
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Buscador */}
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Buscar institucion..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+      {/* NUEVO: Fila Inferior de Tarjetas (Estados Activo / Inactivo) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full -mt-2">
+        <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-500 truncate">Instituciones Activas</p>
+            <h3 className="text-2xl sm:text-3xl font-bold text-emerald-600 truncate">{isLoading ? "-" : activas}</h3>
+          </div>
+          <CheckCircle2 className="h-8 w-8 text-emerald-500 shrink-0" />
+        </CardContent></Card>
+        
+        <Card><CardContent className="p-4 sm:p-6 flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-500 truncate">Instituciones Inactivas</p>
+            <h3 className="text-2xl sm:text-3xl font-bold text-amber-600 truncate">{isLoading ? "-" : inactivas}</h3>
+          </div>
+          <XCircle className="h-8 w-8 text-red-500 shrink-0" />
+        </CardContent></Card>
+      </div>
+
+      <Card className="w-full overflow-hidden border-slate-200 shadow-sm">
+        <CardContent className="p-0">
+          <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <Input placeholder="Buscar por nombre o rector..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-full h-10" />
             </div>
+            
+            <select value={filtroSector} onChange={(e) => setFiltroSector(e.target.value)} className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700">
+              <option value="todos">Todos los Sectores</option>
+              <option value="PUBLICA">Sector Público</option>
+              <option value="PRIVADA">Sector Privado</option>
+            </select>
+
+            <Button variant="outline" onClick={() => { setSearchTerm(""); setFiltroSector("todos"); setOrdenNombre(null); }} className="h-10 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
+              <X className="h-4 w-4 mr-2" /> Limpiar
+            </Button>
           </div>
 
-          {filteredInstituciones.length === 0 ? (
-            <div className="text-center py-12">
-              <Building2 className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500">
-                {searchTerm
-                  ? "No se encontraron instituciones con ese nombre"
-                  : "No hay instituciones registradas"}
-              </p>
-              {!searchTerm && (
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={handleCreate}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear primera institucion
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-20">ID</TableHead>
-                    <TableHead>Nombre Oficial</TableHead>
-                    <TableHead className="w-32">Sector</TableHead>
-                    <TableHead className="w-32 text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInstituciones.map((institucion) => (
-                    <TableRow key={institucion.id}>
-                      <TableCell className="font-mono text-slate-500">
-                        {institucion.id}
-                      </TableCell>
-                      <TableCell className="font-medium">{institucion.nombre}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            institucion.sector === "PUBLICA"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-green-100 text-green-700"
-                          }`}
-                        >
-                          {institucion.sector}
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[900px] text-sm text-left">
+              <thead className="bg-slate-50 text-slate-700 font-medium border-b">
+                <tr>
+                  <th 
+                    className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 transition-colors select-none"
+                    onClick={() => {
+                      if (ordenNombre === 'asc') setOrdenNombre('desc');
+                      else if (ordenNombre === 'desc') setOrdenNombre(null);
+                      else setOrdenNombre('asc');
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      Nombre
+                      {ordenNombre === 'asc' && <ArrowUp className="h-4 w-4 text-blue-600" />}
+                      {ordenNombre === 'desc' && <ArrowDown className="h-4 w-4 text-blue-600" />}
+                      {!ordenNombre && <ArrowUpDown className="h-4 w-4 text-slate-400" />}
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-center">Sector</th>
+                  <th className="px-6 py-4 text-center">Rector</th>
+                  <th className="px-6 py-4 text-center">Número de Contacto</th>
+                  <th className="px-6 py-4 text-center">Estado</th>
+                  <th className="px-6 py-4 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {isLoading ? (
+                  <tr><td colSpan={6} className="text-center py-10 text-slate-500">Cargando directorio...</td></tr>
+                ) : institucionesOrdenadas.length === 0 ? (
+                  <tr><td colSpan={6} className="text-center py-10 text-slate-500">No se encontraron instituciones.</td></tr>
+                ) : (
+                  institucionesOrdenadas.map((inst) => (
+                    <tr key={inst.id} className="hover:bg-slate-50 transition-colors bg-white">
+                      <td className="px-6 py-4 font-medium text-slate-900 text-center">{inst.nombre}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${inst.sector === 'PUBLICA' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`}>
+                          {inst.sector === 'PUBLICA' ? 'Público' : inst.sector === 'PRIVADA' ? 'Privado' : inst.sector}
                         </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(institucion)}
-                            title="Editar"
-                          >
-                            <Pencil className="h-4 w-4 text-slate-600" />
+                      </td>
+                      <td className="px-6 py-4 text-center text-slate-600">{inst.rector || "No asignado"}</td>
+                      <td className="px-6 py-4 text-center text-slate-600">
+                        {inst.num_contacto || "No definido"}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${inst.activo !== false ? 'bg-green-100 text-green-700' : 'bg-slate-200'}`}>
+                          {inst.activo !== false ? "Activa" : "Inactiva"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex justify-center gap-1">
+                          <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-800 hover:bg-blue-50" onClick={() => router.push(`/administrador/instituciones/editar_institucion/${inst.id}`)}>
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteConfirm(institucion)}
-                            title="Eliminar"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
+                          <Button variant="ghost" size="icon" onClick={() => handleClickCambiarEstado(inst)}>
+                            {inst.activo !== false ? <PowerOff className="h-4 w-4 text-amber-600"/> : <Power className="h-4 w-4 text-green-600"/>}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-800 hover:bg-red-50" onClick={() => handleDelete(inst.id)}>
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Modal Crear/Editar */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingInstitucion ? "Editar Institucion" : "Nueva Institucion Educativa"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingInstitucion
-                ? "Modifica los datos de la institucion educativa"
-                : "Ingresa los datos de la nueva institucion educativa"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre Oficial *</Label>
-              <Input
-                id="nombre"
-                placeholder="Ej: I.E. SIMON BOLIVAR"
-                value={formNombre}
-                onChange={(e) => {
-                  setFormNombre(e.target.value)
-                  setFormError("")
-                }}
-                className={formError ? "border-red-500" : ""}
-              />
-              {formError && <p className="text-sm text-red-500">{formError}</p>}
-              <p className="text-xs text-slate-500">
-                Nombre oficial de la institucion educativa
-              </p>
+      {isStatusModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm text-center">
+            <h3 className="font-bold text-slate-900">Confirmar cambio</h3>
+            <p className="my-4 text-sm text-slate-600">
+              ¿Cambiar estado de {instAEditarEstado?.nombre}?
+            </p>
+            <div className="flex justify-center gap-3">
+              <Button variant="outline" onClick={() => setIsStatusModalOpen(false)} disabled={isUpdatingStatus}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={confirmarCambioEstado} 
+                disabled={isUpdatingStatus}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isUpdatingStatus ? "Guardando..." : "Confirmar"}
+              </Button>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} className="bg-orange-600 hover:bg-orange-700">
-              {editingInstitucion ? "Guardar Cambios" : "Crear Institucion"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmacion de eliminacion */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Eliminacion</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta seguro de eliminar la institucion{" "}
-              <strong>{institucionToDelete?.nombre}</strong>? Esta accion no se puede
-              deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        </div>
+      )}
     </div>
   )
 }
