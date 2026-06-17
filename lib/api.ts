@@ -324,7 +324,7 @@ export const api = {
     const res = await fetch(`${BASE_URL}/clasificacion_caso/${id}/`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ activo: nuevoEstado }), // Asegúrate que el backend acepte este campo
+      body: JSON.stringify({ activo: nuevoEstado }),
     });
     if (!res.ok) throw new Error("Error al cambiar el estado");
     return res.json();
