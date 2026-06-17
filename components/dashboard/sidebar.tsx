@@ -192,7 +192,7 @@ export function Sidebar({ type, isCollapsed = false }: SidebarProps) {
 
                   {/* Submenú flotante lateral para la vista colapsada */}
                   {isCollapsedView && (
-                    <div className="absolute left-full top-0 ml-2 hidden group-hover:block z-[999] pointer-events-auto">
+                    <div className="absolute left-full top-0 pl-2 hidden group-hover:block z-[999] pointer-events-auto">
                       <div className="w-60 rounded-md bg-white shadow-xl border border-slate-200 overflow-hidden">
                         <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
                           <span className="text-sm font-bold text-slate-900">{item.name}</span>
