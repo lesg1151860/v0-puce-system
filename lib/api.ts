@@ -1,11 +1,16 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
 
 const getAuthHeaders = () => {
-  let token = null;
-  if (typeof document !== 'undefined') {
-    const match = document.cookie.match(new RegExp('(^| )access_token=([^;]+)'));
-    if (match) token = match[2];
-  }
+  const getCookie = (name: string) => {
+    if (typeof document === 'undefined') return null;
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift();
+    return null;
+  };
+
+  const token = getCookie("access_token");
+
   return {
     'Content-Type': 'application/json',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -13,6 +18,41 @@ const getAuthHeaders = () => {
 };
 
 export const api = {
+
+  getCasosSAC: async () => {
+    
+    const res = await fetch(`${BASE_URL}/casos_sac/`, { 
+      method: 'GET',
+      headers: getAuthHeaders() 
+    });
+
+    if (res.status === 401) {
+        console.error("No autorizado. ¿El token es válido o existe?");
+    }
+
+    if (!res.ok) {
+      throw new Error("Error al obtener los casos SAC");
+    }
+
+    const data = await res.json();
+    return data.results ? data.results : data;
+  },
+
+  // Método opcional: Crear nuevo caso
+  crearCasoSAC: async (datosCaso: any) => {
+    const response = await fetch(`${BASE_URL}/casos_sac/`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(datosCaso),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(JSON.stringify(errorData));
+    }
+    return response.json();
+  },
+
   // --- CRUD USUARIOS ---
   getUsuarios: async () => {
     const res = await fetch(`${BASE_URL}/usuarios/`, { headers: getAuthHeaders() });
@@ -81,19 +121,26 @@ export const api = {
     return res.json();
   },
   toggleActivoInstitucion: async (id: number, activo: boolean) => {
-    const res = await fetch(`${BASE_URL}/institucion_educativa/${id}/`, {
+
+    const url = `${BASE_URL}/institucion_educativa/${id}/`; 
+    
+    console.log("URL de petición corregida:", url); 
+    
+    const res = await fetch(url, {
       method: "PATCH",
-      headers: getAuthHeaders(),
+      headers: { 
+        ...getAuthHeaders(),
+        "Content-Type": "application/json" 
+      },
       body: JSON.stringify({ activo: activo }),
     });
-
+      
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
       console.error("Error del servidor:", errorData); 
-      throw new Error("Error en la API");
+      throw new Error("Error en la API: " + res.status);
     }
     return res.json();
-    
   },
   eliminarInstitucion: async (id: number) => {
     const res = await fetch(`${BASE_URL}/institucion_educativa/${id}/`, {
