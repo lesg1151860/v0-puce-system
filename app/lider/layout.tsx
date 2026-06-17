@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { isAuthenticated, isAdmin, isLider } from "@/lib/auth"
+import { isAuthenticated } from "@/lib/auth"
 import { Sidebar } from "@/components/dashboard/sidebar"
 
 const LiderSidebar = Sidebar as unknown as React.ComponentType<{
@@ -17,12 +17,11 @@ export default function LiderLayout({
 }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
-  
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [currentDate, setCurrentDate] = useState("")
 
   useEffect(() => {
-    if (!isAuthenticated() || !isLider()) {
+    if (!isAuthenticated()) {
       router.push("/login")
       return
     }
@@ -47,6 +46,7 @@ export default function LiderLayout({
 
   return (
     <div className="flex min-h-screen bg-slate-50">
+      {/* Sidebar compartido con el tipo correspondiente */}
       <LiderSidebar type="lider" isCollapsed={isCollapsed} />
       
       <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
