@@ -94,6 +94,8 @@ export default function DashboardAdmin() {
   const totalInst = instituciones.length
   const publicas = instituciones.filter((i: any) => i.sector === "PUBLICA").length
   const privadas = instituciones.filter((i: any) => i.sector === "PRIVADA").length
+  const activas = instituciones.filter((i: any) => i.activo).length
+  const inactivas = totalInst - activas
 
   const totalTipo_Clasificacion = clasificaciones.length
   const tipClasifActivas = clasificaciones.filter((c: any) => c.activo).length
@@ -186,6 +188,11 @@ export default function DashboardAdmin() {
               <div className="flex gap-4 border-t pt-4 text-sm text-slate-600">
                 <div className="flex items-center gap-2"><School className="h-4 w-4 text-orange-600" /> Pública: {publicas}</div>
                 <div className="flex items-center gap-2"><Lock className="h-4 w-4 text-slate-600" /> Privada: {privadas}</div>
+                
+              </div>
+              <div className="flex gap-4 border-t pt-4 text-sm text-slate-600">
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" /> Activas: {activas}</div>
+                <div className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-500" /> Inactivas: {inactivas}</div>
               </div>
             </CardContent>
           </Card>
