@@ -11,9 +11,9 @@ import { ArrowLeft, Save, Loader2, Building2 } from "lucide-react"
 import { api } from "@/lib/api"
 import toast from "react-hot-toast"
 
-
 export default function NuevaInstitucionPage() {
   const router = useRouter()
+  const [cod_dane, setCodDane] = useState("")
   const [nombre, setNombre] = useState("")
   const [rector, setRector] = useState("")
   const [numContacto, setNumContacto] = useState("")
@@ -22,6 +22,12 @@ export default function NuevaInstitucionPage() {
   const [loading, setLoading] = useState(false)
 
   const handleSave = async () => {
+
+    if (!cod_dane || cod_dane.length !== 12) {
+      setError("El Código DANE es obligatorio y debe tener exactamente 12 dígitos numéricos.")
+      return
+    }
+
     if (!nombre || !rector) {
       setError("El Nombre y Rector son campos obligatorios.")
       return
@@ -35,17 +41,25 @@ export default function NuevaInstitucionPage() {
     try {
       setLoading(true)
       setError(null)
-      toast.success("Institución registrada exitosamente")
+      
       await api.crearInstitucion({
+        cod_dane: cod_dane,
         nombre: nombre,
         sector: sector,
         rector: rector,
         num_contacto: numContacto
       })
 
+      toast.success("Institución registrada exitosamente")
       router.push("/administrador/instituciones")
     } catch (err: any) {
-      toast.error("Error al registrar la institución. Verifica los datos.")
+      // 💡 Mejora: Si tu `api.crearInstitucion` lanza un error con detalle, podemos mostrarlo.
+      const errorMsg = err.response?.data?.cod_dane 
+        ? "❌ Este Código DANE ya se encuentra registrado en otra institución." 
+        : "Error al registrar la institución. Verifica los datos."
+        
+      setError(errorMsg)
+      toast.error("Error en el registro.")
     } finally {
       setLoading(false)
     }
@@ -67,6 +81,7 @@ export default function NuevaInstitucionPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           
+          {/* Fila 1: Sector y Código DANE */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Sector <span className="text-red-500">*</span></Label>
@@ -78,7 +93,27 @@ export default function NuevaInstitucionPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* 💡 Nuevo Input para Código DANE */}
+            <div className="space-y-2">
+              <Label>Código DANE <span className="text-red-500">*</span></Label>
+              <Input 
+                type="text"
+                maxLength={12}
+                value={cod_dane} 
+                onChange={(e) => {
+                  const soloNumeros = e.target.value.replace(/\D/g, "")
+                  setCodDane(soloNumeros)
+                }} 
+                placeholder="Ej: 154001000001" 
+                disabled={loading}
+              />
+              <p className="text-xs text-slate-500">
+                {cod_dane.length}/12 dígitos
+              </p>
+            </div>
           </div>
+
           <div className="space-y-2">
             <Label>Nombre de la Institución <span className="text-red-500">*</span></Label>
             <Input 
@@ -88,6 +123,7 @@ export default function NuevaInstitucionPage() {
               disabled={loading}
             />
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Nombre del Rector <span className="text-red-500">*</span></Label>

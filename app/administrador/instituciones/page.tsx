@@ -211,6 +211,7 @@ export default function InstitucionesAdminPage() {
                       {!ordenNombre && <ArrowUpDown className="h-4 w-4 text-slate-400" />}
                     </div>
                   </th>
+                  <th className="px-6 py-4 text-center">Código DANE</th>
                   <th className="px-6 py-4 text-center">Sector</th>
                   <th className="px-6 py-4 text-center">Rector</th>
                   <th className="px-6 py-4 text-center">Número de Contacto</th>
@@ -220,13 +221,14 @@ export default function InstitucionesAdminPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
-                  <tr><td colSpan={6} className="text-center py-10 text-slate-500">Cargando directorio...</td></tr>
+                  <tr><td colSpan={7} className="text-center py-10 text-slate-500">Cargando directorio...</td></tr>
                 ) : institucionesOrdenadas.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-10 text-slate-500">No se encontraron instituciones.</td></tr>
+                  <tr><td colSpan={7} className="text-center py-10 text-slate-500">No se encontraron instituciones.</td></tr>
                 ) : (
                   institucionesOrdenadas.map((inst) => (
                     <tr key={inst.id} className="hover:bg-slate-50 transition-colors bg-white">
                       <td className="px-6 py-4 font-medium text-slate-900 text-center">{inst.nombre}</td>
+                      <td className="px-6 py-4 text-center">{inst.cod_dane}</td>
                       <td className="px-6 py-4 text-center">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${inst.sector === 'PUBLICA' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`}>
                           {inst.sector === 'PUBLICA' ? 'Público' : inst.sector === 'PRIVADA' ? 'Privado' : inst.sector}
