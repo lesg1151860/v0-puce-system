@@ -8,9 +8,7 @@ const getAuthHeaders = () => {
     if (parts.length === 2) return parts.pop()?.split(';').shift();
     return null;
   };
-
   const token = getCookie("access_token");
-
   return {
     'Content-Type': 'application/json',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -18,7 +16,7 @@ const getAuthHeaders = () => {
 };
 
 export const api = {
-
+  // --- CRUD CASOS SAC ---
   getCasosSAC: async () => {
     
     const res = await fetch(`${BASE_URL}/casos_sac/`, { 
@@ -29,23 +27,18 @@ export const api = {
     if (res.status === 401) {
         console.error("No autorizado. ¿El token es válido o existe?");
     }
-
     if (!res.ok) {
       throw new Error("Error al obtener los casos SAC");
     }
-
     const data = await res.json();
     return data.results ? data.results : data;
   },
-
-  // Método opcional: Crear nuevo caso
   crearCasoSAC: async (datosCaso: any) => {
-    const response = await fetch(`${BASE_URL}/casos_sac/`, {
+    const response = await fetch(`${BASE_URL}/casos_sac/nuevo/`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(datosCaso),
     });
-
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(JSON.stringify(errorData));
@@ -153,7 +146,6 @@ export const api = {
 
   // --- GESTIÓN ROLES CIUDADANO ---
   getRolesCiudadano: async () => {
-    // Asegúrate de que esta ruta sea idéntica a la que usas para el POST
     const res = await fetch(`${BASE_URL}/rol_ciudadano/`, { 
       method: 'GET',
       headers: getAuthHeaders() 
@@ -169,7 +161,7 @@ export const api = {
     });
     if (!res.ok) {
       const errorData = await res.json();
-      // Extraemos el error del campo nombre_rol si existe
+      
       const mensaje = errorData.nombre_rol?.[0] || "Error al crear el rol de ciudadano";
       throw new Error(mensaje);
     }
@@ -560,7 +552,6 @@ export const api = {
   },
 
   // --- GESTIÓN EVENTOS GENERADORES ---
-
   getEventosGeneradores: async () => {
     const res = await fetch(`${BASE_URL}/evento_generador/`, { headers: getAuthHeaders() });
     return res.json();
@@ -708,8 +699,6 @@ export const api = {
     });
     return res.json();
   },
-
-  // Eliminar
   eliminarAccionIE: async (id: number) => {
     const res = await fetch(`${BASE_URL}/acciones_ie/${id}/`, {
       method: 'DELETE',
@@ -722,6 +711,7 @@ export const api = {
     return true;
   },
 
+  // --- Acciones SEM ---
   getAccionesSEM: async () => {
     const res = await fetch(BASE_URL + '/acciones_sem/', { headers: getAuthHeaders() });
     return res.json();
