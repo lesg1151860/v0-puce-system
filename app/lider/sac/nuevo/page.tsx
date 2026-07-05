@@ -428,7 +428,7 @@ export default function NuevoCasoSACPage() {
                     required: watchTraslado,
                     pattern: {
                       value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
-                      message: "Estructura inválida."
+                      message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
                     } 
                   })}
                   className={errors.num_radicado_traslado ? "border-red-500 uppercase" : "uppercase"}
@@ -449,7 +449,7 @@ export default function NuevoCasoSACPage() {
                   {...register("radicado_externa", {
                     pattern: {
                       value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
-                      message: "Estructura inválida."
+                      message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
                     }
                   })}
                   className={errors.radicado_externa ? "border-red-500 uppercase" : "uppercase"}
@@ -504,7 +504,7 @@ export default function NuevoCasoSACPage() {
                     required: watchProrroga,
                     pattern: {
                       value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
-                      message: "Estructura inválida."
+                      message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
                     }
                   })}
                   className={errors.radicado_prorroga ? "border-red-500 uppercase" : "uppercase"}
@@ -549,7 +549,7 @@ export default function NuevoCasoSACPage() {
                   required: watchContestacion,
                   pattern: {
                     value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
-                    message: "Estructura inválida."
+                    message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
                   } 
                 })}
                 className={errors.radicado_contestacion_ie ? "border-red-500 uppercase" : "uppercase"}
