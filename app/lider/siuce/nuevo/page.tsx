@@ -265,15 +265,15 @@ export default function NuevoCasoSIUCEPage() {
     }
 
     // Normalizar campos de texto a mayusculas sin tildes
-    const normalizedData = {
+    const normalizedData: CasoSIUCEFormData = {
       ...data,
       victima: sanitizeText(data.victima),
       nombreAgresor: sanitizeText(data.nombreAgresor),
-      descripcionAvance: data.descripcionAvance ? sanitizeText(data.descripcionAvance) : undefined,
-      otroEvento: data.otroEventoGenerador ? sanitizeText(data.otroEventoGenerador) : undefined,
+      descripcionAvance: data.descripcionAvance ? sanitizeText(data.descripcionAvance) : data.descripcionAvance,
+      otroEventoGenerador: data.otroEventoGenerador ? sanitizeText(data.otroEventoGenerador) : data.otroEventoGenerador,
     }
 
-    createCaseSIUCE(normalizedData)
+    createCaseSIUCE(normalizedData as any) // Guardar el caso en el almacenamiento local
     router.push("/lider/siuce")
   } catch (err) {
     setError("Error al guardar el caso. Intente nuevamente.")
