@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Save, Loader2 } from "lucide-react"
+import { ArrowLeft, Save, Loader2, AlertCircle } from "lucide-react"
 import { api } from "@/lib/api" 
 import toast from "react-hot-toast"
 
@@ -18,9 +18,11 @@ export default function EditarUsuarioPage() {
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [rol, setRol] = useState<"ADMINISTRADOR" | "LIDER">("LIDER")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
     const cargarUsuario = async () => {
@@ -29,6 +31,7 @@ export default function EditarUsuarioPage() {
         setFirstName(data.first_name || "")
         setLastName(data.last_name || "")
         setEmail(data.email || "")
+        setUsername(data.username || "")
         
         const rolInicial = data.is_staff ? "ADMINISTRADOR" : "LIDER"
         setRol(rolInicial) 
@@ -43,6 +46,7 @@ export default function EditarUsuarioPage() {
   }, [userId, router])
 
   const handleSave = async () => {
+    setErrors({})
     try {
       setSaving(true)
       
@@ -52,13 +56,19 @@ export default function EditarUsuarioPage() {
         first_name: firstName,
         last_name: lastName,
         email: email,
+        username: username,
         is_staff: esAdministrador 
       })
       
       router.push("/administrador/usuarios")
       toast.success("Usuario actualizado exitosamente.")
-    } catch (error) {
-      toast.error("Error al actualizar el usuario.")
+    } catch (error: any) {
+      if (error?.response?.data) {
+        setErrors(error.response.data)
+        toast.error("Error al actualizar. Revisa los campos marcados en rojo.")
+      } else {
+        toast.error("Error al conectar con el servidor.")
+      }
     } finally {
       setSaving(false)
     }
@@ -90,8 +100,26 @@ export default function EditarUsuarioPage() {
           </div>
           
           <div className="space-y-2">
+            <Label>Nombre de Usuario (Username) <span className="text-red-500">*</span></Label>
+            <Input 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
+              className={errors.username ? "border-red-500 ring-1 ring-red-500" : ""}
+            />
+            {errors.username && (
+              <p className="text-xs font-bold text-red-600 flex items-center mt-1">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                {Array.isArray(errors.username) ? errors.username[0] : errors.username}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
             <Label>Correo Electrónico</Label>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            {errors.email && (
+              <p className="text-xs font-bold text-red-600">{Array.isArray(errors.email) ? errors.email[0] : errors.email}</p>
+            )}
           </div>
 
           <div className="space-y-2">
