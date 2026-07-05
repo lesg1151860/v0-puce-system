@@ -5,11 +5,13 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Search, Shield, UserCheck, Users, Edit2, Trash2, AlertTriangle, X, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react"
+import { Plus, Search, Shield, UserCheck, Users, Edit2, Trash2, AlertTriangle, X, Key,
+        ArrowUpDown, ArrowDown, ArrowUp, Eye, EyeOff } from "lucide-react"
 import { api } from "@/lib/api"
 import toast from "react-hot-toast"
 
 export default function UsuariosPage() {
+  
   const [usuarios, setUsuarios] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -17,6 +19,12 @@ export default function UsuariosPage() {
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [usuarioAEliminar, setUsuarioAEliminar] = useState<number | null>(null)
+  const [isPassModalOpen, setIsPassModalOpen] = useState(false)
+  const [usuarioAClave, setUsuarioAClave] = useState<any>(null)
+  const [passData, setPassData] = useState({ actual: "", nueva: "", confirm: "" })  
+  const [showPassActual, setShowPassActual] = useState(false)
+  const [showPassNueva, setShowPassNueva] = useState(false)
+  const [showPassConfirm, setShowPassConfirm] = useState(false)
 
   const fetchUsuarios = async () => {
     try {
@@ -55,6 +63,48 @@ export default function UsuariosPage() {
   const cancelarEliminacion = () => {
     setIsDeleteModalOpen(false)
     setUsuarioAEliminar(null)
+  }
+  const getPasswordErrors = () => {
+    const { nueva } = passData
+    return {
+      length: nueva.length >= 8 && nueva.length <= 16,
+      upper: /[A-Z]/.test(nueva),
+      number: /\d/.test(nueva),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(nueva),
+      noSequences: nueva.length > 0 && !/(.)\1{2,}|012|123|234|345|456|567|678|789|abc|bcd|cde|def|efg|fgh|ghi/i.test(nueva)
+    }
+  }
+
+  const passErrors = getPasswordErrors()
+  
+  const isPassValid = 
+    Object.values(passErrors).every(v => v === true) && 
+    passData.nueva !== "" && 
+    passData.nueva === passData.confirm
+
+  const handleCambiarClave = async () => {
+    if (!isPassValid) return
+    try {
+    toast.success("Contraseña actualizada correctamente")
+      
+      setIsPassModalOpen(false)
+      setPassData({ actual: "", nueva: "", confirm: "" })
+      setUsuarioAClave(null)
+      setShowPassActual(false)
+      setShowPassNueva(false)
+      setShowPassConfirm(false)
+    } catch (e: any) { 
+      toast.error(e.message || "Error al cambiar la contraseña") 
+    }
+  }
+
+  const cancelarCambioClave = () => {
+    setIsPassModalOpen(false)
+    setPassData({ actual: "", nueva: "", confirm: "" })
+    setUsuarioAClave(null)
+    setShowPassActual(false)
+    setShowPassNueva(false)
+    setShowPassConfirm(false)
   }
 
   const requestSort = (key: string) => {
@@ -134,7 +184,6 @@ export default function UsuariosPage() {
 
       <Card className="w-full overflow-hidden border-slate-200 shadow-sm">
         <CardContent className="p-0">
-          {/* Barra de herramientas */}
             <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -164,7 +213,6 @@ export default function UsuariosPage() {
 
           <div className="w-full overflow-x-auto">
             <table className="w-full min-w-[800px] text-sm text-left">
-              {/* Encabezado actualizado sin 'uppercase' y con 'font-medium' */}
               <thead className="bg-slate-50 text-slate-700 font-medium border-b">
                 <tr>
                   <th 
@@ -217,6 +265,14 @@ export default function UsuariosPage() {
                               <Edit2 className="h-4 w-4 text-blue-600" />
                             </Button>
                           </Link>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="hover:bg-amber-50"
+                            onClick={() => { setUsuarioAClave(usuario); setIsPassModalOpen(true); }}
+                          >
+                            <Key className="h-4 w-4 text-amber-600" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleClickEliminar(usuario.id)} className="hover:bg-red-50">
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
@@ -230,6 +286,130 @@ export default function UsuariosPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal Cambio Contraseña */}
+      {isPassModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-6 space-y-4">
+              <h3 className="text-lg font-bold text-slate-900 border-b pb-2">
+                Cambiar Contraseña
+                <span className="block text-sm font-normal text-slate-500 mt-1">
+                  Usuario: {usuarioAClave?.username}
+                </span>
+              </h3>
+              
+              <div className="space-y-3">
+                {/* Input con opción de Ver/Ocultar */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Contraseña Actual</label>
+                  <div className="relative">
+                    <Input 
+                      type={showPassActual ? "text" : "password"} 
+                      placeholder="Ingresa la contraseña actual" 
+                      value={passData.actual}
+                      onChange={(e) => setPassData({...passData, actual: e.target.value})} 
+                      className="pr-10"
+                    />
+                    <button 
+                      type="button" 
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+                      onClick={() => setShowPassActual(!showPassActual)}
+                    >
+                      {showPassActual ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Input con opción de Ver/Ocultar */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Nueva Contraseña</label>
+                  <div className="relative">
+                    <Input 
+                      type={showPassNueva ? "text" : "password"} 
+                      placeholder="Ingresa la nueva contraseña" 
+                      value={passData.nueva}
+                      onChange={(e) => setPassData({...passData, nueva: e.target.value})} 
+                      className="pr-10"
+                    />
+                    <button 
+                      type="button" 
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+                      onClick={() => setShowPassNueva(!showPassNueva)}
+                    >
+                      {showPassNueva ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Indicadores de validación visuales */}
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                  <p className="text-[11px] font-semibold text-slate-500 mb-2 uppercase tracking-wider">Requisitos de seguridad:</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <p className={`flex items-center gap-1 ${passErrors.length ? "text-emerald-600 font-medium" : "text-slate-400"}`}>
+                      {passErrors.length ? "✓" : "○"} 8-16 caracteres
+                    </p>
+                    <p className={`flex items-center gap-1 ${passErrors.upper ? "text-emerald-600 font-medium" : "text-slate-400"}`}>
+                      {passErrors.upper ? "✓" : "○"} 1 Mayúscula
+                    </p>
+                    <p className={`flex items-center gap-1 ${passErrors.number ? "text-emerald-600 font-medium" : "text-slate-400"}`}>
+                      {passErrors.number ? "✓" : "○"} 1 Número
+                    </p>
+                    <p className={`flex items-center gap-1 ${passErrors.special ? "text-emerald-600 font-medium" : "text-slate-400"}`}>
+                      {passErrors.special ? "✓" : "○"} 1 Carácter especial
+                    </p>
+                    <p className={`col-span-2 flex items-center gap-1 ${passErrors.noSequences ? "text-emerald-600 font-medium" : "text-slate-400"}`}>
+                      {passErrors.noSequences ? "✓" : "○"} Sin números/letras consecutivas
+                    </p>
+                  </div>
+                </div>
+
+                {/* Input con opción de Ver/Ocultar */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Confirmar Nueva Contraseña</label>
+                  <div className="relative">
+                    <Input 
+                      type={showPassConfirm ? "text" : "password"} 
+                      placeholder="Repite la nueva contraseña" 
+                      value={passData.confirm}
+                      onChange={(e) => setPassData({...passData, confirm: e.target.value})} 
+                      className={`pr-10 ${
+                        passData.confirm !== "" && passData.nueva !== passData.confirm 
+                          ? "border-red-500 focus-visible:ring-red-500" 
+                          : (passData.confirm !== "" && passData.nueva === passData.confirm) ? "border-emerald-500 focus-visible:ring-emerald-500" : ""
+                      }`}
+                    />
+                    <button 
+                      type="button" 
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+                      onClick={() => setShowPassConfirm(!showPassConfirm)}
+                    >
+                      {showPassConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {passData.confirm !== "" && passData.nueva !== passData.confirm && (
+                    <p className="text-xs text-red-500 font-medium mt-1">Las contraseñas no coinciden</p>
+                  )}
+                  {passData.confirm !== "" && passData.nueva === passData.confirm && (
+                    <p className="text-xs text-emerald-600 font-medium mt-1">Las contraseñas coinciden</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-slate-50 px-6 py-4 flex flex-col sm:flex-row justify-end gap-3 border-t border-slate-100">
+              <Button variant="outline" onClick={cancelarCambioClave} className="w-full sm:w-auto">Cancelar</Button>
+              <Button 
+                onClick={handleCambiarClave} 
+                disabled={!isPassValid} 
+                className={`w-full sm:w-auto ${isPassValid ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-300"}`}
+              >
+                Guardar Contraseña
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Eliminación */}
       {isDeleteModalOpen && (
