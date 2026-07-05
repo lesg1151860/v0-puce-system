@@ -21,7 +21,7 @@ export default function EditarInstitucionPage() {
   const [rector, setRector] = useState("")
   const [numContacto, setNumContacto] = useState("")
   const [sector, setSector] = useState<"PUBLICA" | "PRIVADA">("PUBLICA")
-  
+  const [codigoDANE, setCodigoDANE] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -34,7 +34,7 @@ export default function EditarInstitucionPage() {
         setRector(data.rector || "")
         setNumContacto(data.num_contacto || "")
         setSector(data.sector || "PUBLICA")
-        
+        setCodigoDANE(data.codigo_dane || "")
         setLoading(false)
       } catch (error) {
         toast.error("Error al cargar la institución.")
@@ -45,7 +45,6 @@ export default function EditarInstitucionPage() {
   }, [institucionId, router])
 
   const handleSave = async () => {
-    // Validaciones de campos obligatorios
     if (!nombre || !rector) {
       toast.error("El Nombre y Rector son obligatorios.")
       return
@@ -63,7 +62,8 @@ export default function EditarInstitucionPage() {
         nombre: nombre,
         sector: sector,
         rector: rector,
-        num_contacto: numContacto
+        num_contacto: numContacto,
+        codigo_dane: codigoDANE,
       })
       
       toast.success("Institución actualizada exitosamente.")
@@ -89,21 +89,38 @@ export default function EditarInstitucionPage() {
             <Building2 className="h-6 w-6 text-blue-600" />
             <CardTitle>Editar Institución</CardTitle>
           </div>
-          <CardDescription>Modifica los datos de lla Institución Educativa en el directorio del sistema.</CardDescription>
+          <CardDescription>Modifica los datos de la Institución Educativa en el directorio del sistema.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-             
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Sector <span className="text-red-500">*</span></Label>
               <Select value={sector} onValueChange={(v: "PUBLICA" | "PRIVADA") => setSector(v)} disabled={saving}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PUBLICA">Pública</SelectItem>
-                  <SelectItem value="PRIVADA">Privada</SelectItem>
-                </SelectContent>
+                 <SelectContent>
+                   <SelectItem value="PUBLICA">Pública</SelectItem>
+                   <SelectItem value="PRIVADA">Privada</SelectItem>
+                 </SelectContent>
               </Select>
             </div>
-          
+
+            <div className="space-y-2">
+              <Label>Código DANE</Label>
+              <Input 
+                value={codigoDANE} 
+                maxLength={12}
+                onChange={(e) => {
+                  const soloNumeros = e.target.value.replace(/\D/g, "")
+                  setCodigoDANE(soloNumeros)
+                }} 
+                disabled={saving}
+                placeholder="Ej: 123456789012"
+              />
+              <p className="text-xs text-slate-500">
+                {codigoDANE.length}/12 dígitos
+              </p>
+            </div>
+          </div>          
 
           <div className="space-y-2">
             <Label>Nombre de la Institución <span className="text-red-500">*</span></Label>
