@@ -44,6 +44,7 @@ export default function EditarCasoSACPage() {
     watch, 
     reset,
     setError: setFieldError,
+    clearErrors,
     formState: { errors },
   } = useForm<any>({
     mode: "onChange", 
@@ -66,14 +67,11 @@ export default function EditarCasoSACPage() {
   const watchContestacion = watch("contestacion_ie", false)
   const watchRadicadoRespuesta = watch("radicado_respuesta")
 
-  // 💡 AUTOMATIZACIÓN DE NEGOCIO: Cierre de Caso y Estados
   useEffect(() => {
-    // 1. Si el usuario escribe algo en el radicado de respuesta, encendemos el switch automáticamente
     if (watchRadicadoRespuesta && watchRadicadoRespuesta.trim() !== "" && !watchRespondido) {
       setValue("respondido", true, { shouldValidate: true })
     }
 
-    // 2. Si el caso se marca como respondido (ya sea por el switch o por escribir el radicado), pasa a TERMINADO
     if (watchRespondido) {
       const estadoCierre = estadosSAC.find(est => {
         const nombre = (est.nombre || est.estado_sac || est.nom_estado_sac || "").toUpperCase()
@@ -103,26 +101,13 @@ export default function EditarCasoSACPage() {
           fetch(`http://127.0.0.1:8000/api/casos-sac/${id}/`, { headers }),
         ])
 
-        if (resIE.ok) {
-          const data = await resIE.json()
-          setInstituciones(data.results || (Array.isArray(data) ? data : []))
-        }
-        if (resEstados.ok) {
-          const data = await resEstados.json()
-          setEstadosSAC(data.results || (Array.isArray(data) ? data : []))
-        }
-        if (resClasif.ok) {
-          const data = await resClasif.json()
-          setClasificaciones(data.results || (Array.isArray(data) ? data : []))
-        }
-        if (resRoles.ok) {
-          const data = await resRoles.json()
-          setRolesCiudadano(data.results || (Array.isArray(data) ? data : []))
-        }
+        if (resIE.ok) setInstituciones(await resIE.json().then(d => d.results || d))
+        if (resEstados.ok) setEstadosSAC(await resEstados.json().then(d => d.results || d))
+        if (resClasif.ok) setClasificaciones(await resClasif.json().then(d => d.results || d))
+        if (resRoles.ok) setRolesCiudadano(await resRoles.json().then(d => d.results || d))
 
         if (resCaso.ok) {
           const casoData = await resCaso.json()
-          
           reset({
             num_radicado_sac: casoData.num_radicado_sac || "",
             ciudadano: casoData.ciudadano || "",
@@ -132,20 +117,16 @@ export default function EditarCasoSACPage() {
             clasificacion: casoData.clasificacion ? String(casoData.clasificacion) : "",
             estado_sac: casoData.estado_sac ? String(casoData.estado_sac) : "",
             descripcion: casoData.descripcion || "",
-            
             traslado_ie: casoData.traslado_ie || false,
             institucion_1: casoData.institucion_1 ? String(casoData.institucion_1) : "",
             institucion_2: casoData.institucion_2 ? String(casoData.institucion_2) : "",
             num_radicado_traslado: casoData.num_radicado_traslado || "",
             radicado_externa: casoData.radicado_externa || "",
-            
             respondido: casoData.respondido || false,
             radicado_respuesta: casoData.radicado_respuesta || "",
-            
             prorroga: casoData.prorroga || false,
             fecha_nueva_prorroga: casoData.fecha_nueva_prorroga || "",
             radicado_prorroga: casoData.radicado_prorroga || "",
-            
             contestacion_ie: casoData.contestacion_ie || false,
             radicado_contestacion_ie: casoData.radicado_contestacion_ie || "",
           })
@@ -175,6 +156,15 @@ export default function EditarCasoSACPage() {
       return
     }
 
+    if (watchTraslado) {
+      if (data.institucion_1 && data.institucion_2 && data.institucion_1 === data.institucion_2) {
+        setFieldError("institucion_1", { type: "manual", message: "No puede ser igual a la I.E Secundaria." })
+        setFieldError("institucion_2", { type: "manual", message: "No puede ser igual a la I.E de Origen." })
+        setIsLoading(false)
+        return
+      }
+    }
+
     const limpiarTexto = (val: any) => {
       if (val === "" || val === undefined || val === null) return null
       return String(val).trim().toUpperCase() 
@@ -197,20 +187,16 @@ export default function EditarCasoSACPage() {
         clasificacion: limpiarNumero(data.clasificacion),
         estado_sac: limpiarNumero(data.estado_sac),
         descripcion: limpiarTexto(data.descripcion),
-        
         traslado_ie: watchTraslado,
         institucion_1: watchTraslado ? limpiarNumero(data.institucion_1) : null,
         institucion_2: watchTraslado ? limpiarNumero(data.institucion_2) : null,
         num_radicado_traslado: watchTraslado ? limpiarTexto(data.num_radicado_traslado) : null,
         radicado_externa: watchTraslado ? limpiarTexto(data.radicado_externa) : null,
-        
         respondido: watchRespondido,
         radicado_respuesta: watchRespondido ? limpiarTexto(data.radicado_respuesta) : null,
-        
         prorroga: watchProrroga,
         fecha_nueva_prorroga: watchProrroga ? (data.fecha_nueva_prorroga || null) : null,
         radicado_prorroga: watchProrroga ? limpiarTexto(data.radicado_prorroga) : null,
-        
         contestacion_ie: watchContestacion,
         radicado_contestacion_ie: watchContestacion ? limpiarTexto(data.radicado_contestacion_ie) : null,
       }
@@ -227,16 +213,24 @@ export default function EditarCasoSACPage() {
       if (!response.ok) {
         const errorData = await response.json()
         
-        if (response.status === 400 && errorData.num_radicado_sac) {
-          setFieldError("num_radicado_sac", {
-            type: "manual",
-            message: "Ya existe un caso registrado con este número de radicado. No se admiten duplicados."
-          })
-          setIsLoading(false)
-          return
-        }
+        const camposRadicado = [
+          "num_radicado_sac", "num_radicado_traslado", "radicado_externa", 
+          "radicado_prorroga", "radicado_contestacion_ie", "radicado_respuesta"
+        ];
+        
+        let errorEncontrado = false;
+        camposRadicado.forEach(campo => {
+          if (errorData[campo]) {
+            setFieldError(campo, { type: "server", message: "Este número de radicado ya existe. No se admiten duplicados." })
+            errorEncontrado = true;
+          }
+        });
 
-        throw new Error(errorData.detail || "Error en el servidor al actualizar el registro.")
+        if (!errorEncontrado) {
+          throw new Error(errorData.detail || "Error en el servidor al actualizar el registro.")
+        }
+        setIsLoading(false)
+        return
       }
 
       router.push("/lider/sac")
@@ -298,7 +292,8 @@ export default function EditarCasoSACPage() {
                     pattern: {
                       value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
                       message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
-                    }
+                    },
+                    onChange: () => { clearErrors("num_radicado_sac"); setError(""); }
                   })}
                   className={errors.num_radicado_sac ? "border-red-500 focus-visible:ring-red-500 uppercase" : "uppercase"}
                   disabled={isLoading}
@@ -349,7 +344,6 @@ export default function EditarCasoSACPage() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2 md:col-span-2">
                 <Label>Nombre del Estudiante</Label>
                 <Input
@@ -359,7 +353,6 @@ export default function EditarCasoSACPage() {
                   disabled={isLoading}
                 />
               </div>
-
               <div className="space-y-2 md:col-span-2 border-t pt-4 mt-2">
                 <Label>Descripción / Observaciones</Label>
                 <Textarea
@@ -373,7 +366,6 @@ export default function EditarCasoSACPage() {
                   Información adicional sobre la queja, reclamo o solicitud. Se guardará automáticamente en mayúsculas.
                 </p>
               </div>
-
             </div>
           </CardContent>
         </Card>
@@ -399,36 +391,67 @@ export default function EditarCasoSACPage() {
           </CardHeader>
           <CardContent className={`space-y-4 transition-all duration-300 ${watchTraslado ? "opacity-100" : "opacity-40 pointer-events-none bg-slate-50/30"}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
               <div className="space-y-2">
                 <Label>Institución de Origen / Principal <span className="text-red-500">*</span></Label>
-                <Select value={watch("institucion_1") ? String(watch("institucion_1")) : undefined} onValueChange={(val) => setValue("institucion_1", val, { shouldValidate: true })} disabled={isLoading || !watchTraslado}>
-                  <SelectTrigger className={errors.institucion_1 ? "border-red-500" : ""}>
+                <Select 
+                  value={watch("institucion_1") ? String(watch("institucion_1")) : undefined} 
+                  onValueChange={(val) => {
+                    setValue("institucion_1", val, { shouldValidate: true });
+                    if (errors.institucion_1) setFieldError("institucion_1", { message: "" });
+                  }} 
+                  disabled={isLoading || !watchTraslado}
+                >
+                  <SelectTrigger className={errors.institucion_1?.message ? "border-red-500" : ""}>
                     <SelectValue placeholder="Seleccione la institución..." />
                   </SelectTrigger>
                   <SelectContent>
                     {instituciones.map((inst) => {
                       const idVal = inst.id?.toString();
                       if (!idVal) return null;
-                      return <SelectItem key={idVal} value={idVal}>{inst.nombre || inst.nombre_ie}</SelectItem>
+                      const isSelectedIn2 = watch("institucion_2") === idVal;
+                      return (
+                        <SelectItem key={idVal} value={idVal} disabled={isSelectedIn2}>
+                          {inst.nombre || inst.nombre_ie}
+                        </SelectItem>
+                      )
                     })}
                   </SelectContent>
                 </Select>
+                {errors.institucion_1?.message && (
+                  <p className="text-xs font-bold text-red-500 mt-1">{errors.institucion_1.message as string}</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label>Institución Secundaria <span className="text-red-500">*</span></Label>
-                <Select value={watch("institucion_2") ? String(watch("institucion_2")) : undefined} onValueChange={(val) => setValue("institucion_2", val, { shouldValidate: true })} disabled={isLoading || !watchTraslado}>
-                  <SelectTrigger className={errors.institucion_2 ? "border-red-500" : ""}>
+                <Select 
+                  value={watch("institucion_2") ? String(watch("institucion_2")) : undefined} 
+                  onValueChange={(val) => {
+                    setValue("institucion_2", val, { shouldValidate: true });
+                    if (errors.institucion_2) setFieldError("institucion_2", { message: "" });
+                  }} 
+                  disabled={isLoading || !watchTraslado}
+                >
+                  <SelectTrigger className={errors.institucion_2?.message ? "border-red-500" : ""}>
                     <SelectValue placeholder="Seleccione de traslado..." />
                   </SelectTrigger>
                   <SelectContent>
                     {instituciones.map((inst) => {
                       const idVal = inst.id?.toString();
                       if (!idVal) return null;
-                      return <SelectItem key={idVal} value={idVal}>{inst.nombre || inst.nombre_ie}</SelectItem>
+                      const isSelectedIn1 = watch("institucion_1") === idVal;
+                      return (
+                        <SelectItem key={idVal} value={idVal} disabled={isSelectedIn1}>
+                          {inst.nombre || inst.nombre_ie}
+                        </SelectItem>
+                      )
                     })}
                   </SelectContent>
                 </Select>
+                {errors.institucion_2?.message && (
+                  <p className="text-xs font-bold text-red-500 mt-1">{errors.institucion_2.message as string}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -437,15 +460,22 @@ export default function EditarCasoSACPage() {
                   placeholder="Ej: CUC2026ER002434"
                   maxLength={15}
                   {...register("num_radicado_traslado", { 
-                    required: watchTraslado,
+                    required: watchTraslado ? "El radicado de traslado es obligatorio." : false,
                     pattern: {
                       value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
-                      message: "Estructura inválida."
-                    } 
+                      message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
+                    },
+                    // 💡 Limpiamos el error
+                    onChange: () => { clearErrors("num_radicado_traslado"); setError(""); }
                   })}
-                  className={errors.num_radicado_traslado ? "border-red-500 uppercase" : "uppercase"}
+                  className={errors.num_radicado_traslado ? "border-red-500 uppercase focus-visible:ring-red-500" : "uppercase"}
                   disabled={isLoading || !watchTraslado}
                 />
+                {errors.num_radicado_traslado && (
+                  <p className="text-xs font-bold text-red-500 mt-1 animate-fade-in">
+                    {errors.num_radicado_traslado.message as string}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -456,12 +486,18 @@ export default function EditarCasoSACPage() {
                   {...register("radicado_externa", {
                     pattern: {
                       value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
-                      message: "Estructura inválida."
-                    }
+                      message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
+                    },
+                    onChange: () => { clearErrors("radicado_externa"); setError(""); }
                   })}
-                  className={errors.radicado_externa ? "border-red-500 uppercase" : "uppercase"}
+                  className={errors.radicado_externa ? "border-red-500 uppercase focus-visible:ring-red-500" : "uppercase"}
                   disabled={isLoading || !watchTraslado}
                 />
+                {errors.radicado_externa && (
+                  <p className="text-xs font-bold text-red-500 mt-1 animate-fade-in">
+                    {errors.radicado_externa.message as string}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -503,15 +539,21 @@ export default function EditarCasoSACPage() {
                   placeholder="Ej: CUC2026EO002434"
                   maxLength={15}
                   {...register("radicado_prorroga", {
-                    required: watchProrroga,
+                    required: watchProrroga ? "El radicado de prórroga es obligatorio." : false,
                     pattern: {
                       value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
-                      message: "Estructura inválida."
-                    }
+                      message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
+                    },
+                    onChange: () => { clearErrors("radicado_prorroga"); setError(""); }
                   })}
-                  className={errors.radicado_prorroga ? "border-red-500 uppercase" : "uppercase"}
+                  className={errors.radicado_prorroga ? "border-red-500 uppercase focus-visible:ring-red-500" : "uppercase"}
                   disabled={isLoading || !watchProrroga}
                 />
+                {errors.radicado_prorroga && (
+                  <p className="text-xs font-bold text-red-500 mt-1 animate-fade-in">
+                    {errors.radicado_prorroga.message as string}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -543,15 +585,21 @@ export default function EditarCasoSACPage() {
                 placeholder="Ej: CUC2026ER002434"
                 maxLength={15}
                 {...register("radicado_contestacion_ie", { 
-                  required: watchContestacion,
+                  required: watchContestacion ? "El radicado de contestación es obligatorio." : false,
                   pattern: {
                     value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
-                    message: "Estructura inválida."
-                  } 
+                    message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
+                  },
+                  onChange: () => { clearErrors("radicado_contestacion_ie"); setError(""); }
                 })}
-                className={errors.radicado_contestacion_ie ? "border-red-500 uppercase" : "uppercase"}
+                className={errors.radicado_contestacion_ie ? "border-red-500 uppercase focus-visible:ring-red-500" : "uppercase"}
                 disabled={isLoading || !watchContestacion}
               />
+              {errors.radicado_contestacion_ie && (
+                <p className="text-xs font-bold text-red-500 mt-1 animate-fade-in">
+                  {errors.radicado_contestacion_ie.message as string}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -613,7 +661,6 @@ export default function EditarCasoSACPage() {
             <div className="pt-4 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               
               <div className="space-y-2 md:col-span-1">
-                {/* 💡 Agregada la validación visual obligatoria en la etiqueta */}
                 <Label>N° Radicado de Respuesta SAC (Cierre) {watchRespondido && <span className="text-red-500">*</span>}</Label>
                 <Input
                   placeholder="Ej: CUC2026RS004812"
@@ -623,13 +670,15 @@ export default function EditarCasoSACPage() {
                     pattern: {
                       value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
                       message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
-                    } 
+                    },
+                    // 💡 Limpiamos el error
+                    onChange: () => { clearErrors("radicado_respuesta"); setError(""); }
                   })}
-                  className={errors.radicado_respuesta ? "border-red-500 uppercase" : "uppercase"}
+                  className={errors.radicado_respuesta ? "border-red-500 uppercase focus-visible:ring-red-500" : "uppercase"}
                   disabled={isLoading}
                 />
                 {errors.radicado_respuesta && (
-                  <p className="text-xs font-bold text-red-500 mt-1">
+                  <p className="text-xs font-bold text-red-500 mt-1 animate-fade-in">
                     {errors.radicado_respuesta.message as string}
                   </p>
                 )}
@@ -650,7 +699,7 @@ export default function EditarCasoSACPage() {
             </div>
 
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-200 mt-4">
+              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-200 mt-4 animate-fade-in">
                 {error}
               </div>
             )}
