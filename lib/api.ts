@@ -16,14 +16,13 @@ const getAuthHeaders = () => {
 };
 
 export const api = {
+
   // --- CRUD CASOS SAC ---
   getCasosSAC: async () => {
-    
     const res = await fetch(`${BASE_URL}/casos_sac/`, { 
       method: 'GET',
       headers: getAuthHeaders() 
     });
-
     if (res.status === 401) {
         console.error("No autorizado. ¿El token es válido o existe?");
     }
@@ -32,6 +31,16 @@ export const api = {
     }
     const data = await res.json();
     return data.results ? data.results : data;
+  },
+  getCasoSACbyId: async (id: string | number) => {
+    const res = await fetch(`${BASE_URL}/casos_sac/${id}/`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) {
+      throw new Error(`Error al obtener el caso SAC con ID: ${id}`);
+    }
+    return await res.json();
   },
   crearCasoSAC: async (datosCaso: any) => {
     const response = await fetch(`${BASE_URL}/casos_sac/nuevo/`, {
@@ -44,6 +53,97 @@ export const api = {
       throw new Error(JSON.stringify(errorData));
     }
     return response.json();
+  },
+  actualizarCasoSAC: async (id: string | number, datosCaso: any) => {
+    const response = await fetch(`${BASE_URL}/casos_sac/${id}/`, {
+      method: "PATCH", 
+      headers: getAuthHeaders(),
+      body: JSON.stringify(datosCaso),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(JSON.stringify(errorData));
+    }
+    return response.json();
+  },
+  eliminarCasoSAC: async (id: string | number) => {
+    const response = await fetch(`${BASE_URL}/casos_sac/${id}/`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(`Error al eliminar el caso SAC con ID: ${id}`);
+    }
+    return true; 
+  },
+
+  // --- CRUD CASOS SIUCE ---
+  getCasosSIUCE: async () => {
+    const res = await fetch(`${BASE_URL}/caso-siuce/`, { 
+      method: 'GET',
+      headers: getAuthHeaders() 
+    });
+
+    if (res.status === 401) {
+        console.error("No autorizado. ¿El token es válido o existe?");
+    }
+    if (!res.ok) {
+      throw new Error("Error al obtener los casos SIUCE");
+    }
+    const data = await res.json();
+    return data.results ? data.results : data;
+  },
+
+  getCasoSIUCEbyId: async (id: string | number) => {
+    const res = await fetch(`${BASE_URL}/caso-siuce/${id}/`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error al obtener el caso SIUCE con ID: ${id}`);
+    }
+    return await res.json();
+  },
+
+  crearCasoSIUCE: async (datosCaso: any) => {
+    const response = await fetch(`${BASE_URL}/caso-siuce/nuevo/`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(datosCaso),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(JSON.stringify(errorData));
+    }
+    return response.json();
+  },
+
+  actualizarCasoSIUCE: async (id: string | number, datosCaso: any) => {
+    const response = await fetch(`${BASE_URL}/caso-siuce/${id}/`, {
+      method: "PATCH", 
+      headers: getAuthHeaders(),
+      body: JSON.stringify(datosCaso),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(JSON.stringify(errorData));
+    }
+    return response.json();
+  },
+
+  eliminarCasoSIUCE: async (id: string | number) => {
+    const response = await fetch(`${BASE_URL}/caso-siuce/${id}/`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error al eliminar el caso SIUCE con ID: ${id}`);
+    }
+    return true; 
   },
 
   // --- CRUD USUARIOS ---
@@ -69,11 +169,20 @@ export const api = {
   editarUsuario: async (id: string, data: any) => {
     const res = await fetch(`${BASE_URL}/usuarios/${id}/`, {
       method: 'PATCH', 
-      headers: getAuthHeaders(),
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Error al actualizar el usuario");
-    return res.json();
+    const result = await res.json();
+
+    if (!res.ok) {
+      const error = new Error("Error al actualizar el usuario");
+      (error as any).response = { data: result }; 
+      throw error;
+    }
+    return result;
   },
   eliminarUsuario: async (id: number) => {
     const res = await fetch(`${BASE_URL}/usuarios/${id}/`, {
