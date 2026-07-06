@@ -37,7 +37,7 @@ export default function LoginPage() {
     setValue("captcha", "")
   }
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (form_data: LoginFormData) => {
     setIsLoading(true)
     setError("")
 
@@ -46,8 +46,8 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: data.username,
-          password: data.password,
+          username: form_data.username,
+          password: form_data.password,
         }),
       })
 
@@ -57,8 +57,21 @@ export default function LoginPage() {
         document.cookie = `access_token=${result.access}; path=/; max-age=86400; SameSite=Lax;`
         document.cookie = `refresh_token=${result.refresh}; path=/; max-age=604800; SameSite=Lax;`
 
-        const finalRole = (result.role || result.rol || (data.username.toLowerCase().includes("admin") ? "ADMINISTRADOR" : "LIDER")).toUpperCase()
+        localStorage.setItem("access_token", result.access)
+        if (result.refresh) {
+          localStorage.setItem("refresh_token", result.refresh)
+        }
+
+        const userData = result.usuario || result.user || { 
+          username: form_data.username,
+          first_name: result.first_name || "",
+          last_name: result.last_name || ""
+        }
+        localStorage.setItem("user", JSON.stringify(userData))
+
+        const finalRole = (result.role || result.rol || (form_data.username.toLowerCase().includes("admin") ? "ADMINISTRADOR" : "LIDER")).toUpperCase()
         document.cookie = `user_role=${finalRole}; path=/; max-age=86400; SameSite=Lax;`
+        localStorage.setItem("user_role", finalRole) 
 
         if (finalRole.includes("LIDER")) {
           window.location.href = "/lider"
