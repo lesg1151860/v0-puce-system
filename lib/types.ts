@@ -165,6 +165,9 @@ export type RolUsuario = "ADMINISTRADOR" | "LIDER" | "USUARIO";
 export interface Usuario {
   id: number
   nombre: string
+  first_name: string
+  last_name: string
+  username: string
   email: string
   rol: RolUsuario
 }
