@@ -1,20 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import {
-  Building2,
-  Activity,
-} from "lucide-react"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts"
+import {Building2,Activity} from "lucide-react"
+import {BarChart,Bar,XAxis,YAxis,CartesianGrid,Tooltip, ResponsiveContainer,Cell} from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getAccionesIEStats, getAccionesSEMStats } from "@/lib/storage"
 
