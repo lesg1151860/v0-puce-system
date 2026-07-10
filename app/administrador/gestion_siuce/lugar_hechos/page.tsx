@@ -104,7 +104,7 @@ export default function LugarHechosPage() {
     <div className="grid grid-cols-1 gap-6 p-4 sm:p-8 w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-slate-800">Lugar de los Hechos</h1>
-        <Button onClick={() => { setItemEnProceso(null); setDescripcion(""); setIsFormModalOpen(true); }} className="bg-blue-600 w-full sm:w-auto">
+        <Button onClick={() => { setItemEnProceso(null); setDescripcion(""); setIsFormModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Nuevo Lugar
         </Button>
       </div>
