@@ -135,7 +135,7 @@ export default function AccionesIEPage() {
           <h1 className="text-2xl font-bold text-slate-800">Acciones de la I.E.</h1>
           <p className="text-slate-500">Gestión de Acciones por parte de la Institución Educativa registradas en el sistema.</p>
         </div>
-        <Button onClick={() => { setItemEnProceso(null); setNombreAccion(""); setPorcentaje(""); setIsFormModalOpen(true); }} className="bg-blue-600 w-full sm:w-auto">
+        <Button onClick={() => { setItemEnProceso(null); setNombreAccion(""); setPorcentaje(""); setIsFormModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Nueva Acción
         </Button>
       </div>

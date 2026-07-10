@@ -141,7 +141,7 @@ export default function AccionesSEMPage() {
           <h1 className="text-2xl font-bold text-slate-800">Acciones S.E.M.</h1>
           <p className="text-slate-500">Gestión de Acciones por parte de la Secretaría de Educación Municipal registradas en el sistema.</p>
         </div>
-        <Button onClick={() => { setItemEnProceso(null); setNombreAccion(""); setPorcentaje(""); setIsFormModalOpen(true); }} className="bg-blue-600 w-full sm:w-auto">
+        <Button onClick={() => { setItemEnProceso(null); setNombreAccion(""); setPorcentaje(""); setIsFormModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Nueva Acción
         </Button>
       </div>
