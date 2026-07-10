@@ -53,9 +53,8 @@ export default function NuevaInstitucionPage() {
       toast.success("Institución registrada exitosamente")
       router.push("/administrador/instituciones")
     } catch (err: any) {
-      // 💡 Mejora: Si tu `api.crearInstitucion` lanza un error con detalle, podemos mostrarlo.
       const errorMsg = err.response?.data?.cod_dane 
-        ? "❌ Este Código DANE ya se encuentra registrado en otra institución." 
+        ? "Este Código DANE ya se encuentra registrado en otra institución." 
         : "Error al registrar la institución. Verifica los datos."
         
       setError(errorMsg)
@@ -80,8 +79,7 @@ export default function NuevaInstitucionPage() {
           <CardDescription>Añade una nueva Institución Educativa al sistema.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          
-          {/* Fila 1: Sector y Código DANE */}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Sector <span className="text-red-500">*</span></Label>
@@ -94,7 +92,6 @@ export default function NuevaInstitucionPage() {
               </Select>
             </div>
 
-            {/* 💡 Nuevo Input para Código DANE */}
             <div className="space-y-2">
               <Label>Código DANE <span className="text-red-500">*</span></Label>
               <Input 
