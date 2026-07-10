@@ -10,8 +10,7 @@ import { Progress } from "@/components/ui/progress"
 import { 
   Plus, Search, FileText, CheckCircle, Clock, Edit2, 
   Trash2, AlertTriangle, X, ArrowUpDown, ArrowDown, ArrowUp,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertCircle
-} from "lucide-react"
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight} from "lucide-react"
 import toast from "react-hot-toast"
 
 const getAuthToken = () => {
@@ -100,7 +99,7 @@ export default function SIUCEListPage() {
   const obtenerNombreClasificacion = (id: any) => {
     if (!id) return "Sin Clasificar";
     const obj = clasificaciones.find(e => e.id?.toString() === id.toString());
-    return obj ? (obj.nombre || obj.clasificacion || "Sin Clasificar") : "Sin Clasificar";
+    return obj ? (obj.descripcion || obj.clasificacion || "Sin Clasificar") : "Sin Clasificar";
   }
 
   const handleClickEliminar = (id: number) => {
@@ -223,21 +222,13 @@ export default function SIUCEListPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
         <Card className="border-slate-100 shadow-sm"><CardContent className="p-4 sm:p-6 flex items-center justify-between">
           <div className="min-w-0">
             <p className="text-sm font-medium text-slate-500 truncate">Total Casos SIUCE</p>
             <h3 className="text-2xl sm:text-3xl font-bold truncate">{totalCasos}</h3>
           </div>
           <FileText className="h-8 w-8 text-indigo-500 shrink-0" />
-        </CardContent></Card>
-        
-        <Card className="border-slate-100 shadow-sm"><CardContent className="p-4 sm:p-6 flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-500 truncate">Casos Pendientes</p>
-            <h3 className="text-2xl sm:text-3xl font-bold truncate text-yellow-600">{totalPendientes}</h3>
-          </div>
-          <AlertCircle className="h-8 w-8 text-yellow-500 shrink-0" />
         </CardContent></Card>
 
         <Card className="border-slate-100 shadow-sm"><CardContent className="p-4 sm:p-6 flex items-center justify-between">
@@ -407,7 +398,7 @@ export default function SIUCEListPage() {
                             {clasificacion}
                           </Badge>
                         </td>
-                        <td className="px-6 py-4 text-center text-slate-600 font-medium">{formatearTexto(nombreRegistrador)}</td>
+                        <td className="px-6 py-4 text-center text-slate-600 font-medium">{caso.usuario_registro_siuce}</td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex justify-center gap-2">
                             <Link href={`/lider/siuce/editar/${caso.id}`}>
