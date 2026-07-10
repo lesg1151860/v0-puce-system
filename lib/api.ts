@@ -81,7 +81,7 @@ export const api = {
   getCasosSIUCE: async () => {
     const res = await fetch(`${BASE_URL}/caso-siuce/`, { 
       method: 'GET',
-      headers: getAuthHeaders() 
+      headers: getAuthHeaders()
     });
 
     if (res.status === 401) {
@@ -93,7 +93,6 @@ export const api = {
     const data = await res.json();
     return data.results ? data.results : data;
   },
-
   getCasoSIUCEbyId: async (id: string | number) => {
     const res = await fetch(`${BASE_URL}/caso-siuce/${id}/`, {
       method: 'GET',
@@ -105,11 +104,13 @@ export const api = {
     }
     return await res.json();
   },
-
   crearCasoSIUCE: async (datosCaso: any) => {
-    const response = await fetch(`${BASE_URL}/caso-siuce/nuevo/`, {
+    const response = await fetch(`${BASE_URL}/caso-siuce/`, {
       method: "POST",
-      headers: getAuthHeaders(),
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(datosCaso),
     });
     
@@ -119,11 +120,13 @@ export const api = {
     }
     return response.json();
   },
-
   actualizarCasoSIUCE: async (id: string | number, datosCaso: any) => {
     const response = await fetch(`${BASE_URL}/caso-siuce/${id}/`, {
       method: "PATCH", 
-      headers: getAuthHeaders(),
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(datosCaso),
     });
     
@@ -133,11 +136,13 @@ export const api = {
     }
     return response.json();
   },
-
   eliminarCasoSIUCE: async (id: string | number) => {
     const response = await fetch(`${BASE_URL}/caso-siuce/${id}/`, {
       method: "DELETE",
-      headers: getAuthHeaders(),
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
     });
     
     if (!response.ok) {
