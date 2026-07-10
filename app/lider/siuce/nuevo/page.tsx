@@ -5,291 +5,264 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
-import { ArrowLeft, Loader2, Save, Info } from "lucide-react"
-
+import { ArrowLeft, Loader2, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Progress } from "@/components/ui/progress"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-
 import { casoSIUCESchema, type CasoSIUCEFormData } from "@/lib/validations"
-import { createCaseSIUCE, isRadicadoSIUCEDuplicado, isIdentificacionSIUCEDuplicada } from "@/lib/storage"
 import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
+import { api } from "@/lib/api"
 
-// Opciones de selección
-const instituciones = [
-  "I.E. Simón Bolívar",
-  "I.E. Antonio Nariño",
-  "I.E. Francisco de Paula Santander",
-  "I.E. Policarpa Salavarrieta",
-  "I.E. Rafael Uribe Uribe",
-  "I.E. José María Córdoba",
-  "Otra",
-] as const
 
-const tiposIdentificacion = ["RC", "TI", "CC", "CE", "PPT", "NES"] as const
-
-const grados = [
-  "Preescolar", "Primero", "Segundo", "Tercero", "Cuarto", "Quinto",
-  "Sexto", "Séptimo", "Octavo", "Noveno", "Décimo", "Undécimo",
-] as const
-
-const tiposDano = ["Físico", "Psicológico", "Sexual", "Económico"] as const
-
-// Tipos de agresión con su daño asociado según reglas de negocio
 const tiposAgresionConDano: Record<string, { agresiones: string[], dano: string }> = {
-  "Económico": { 
-    agresiones: ["Hurto"], 
-    dano: "Económico" 
-  },
-  "Físico": { 
-    agresiones: ["Acoso escolar", "Violencia Intrafamiliar", "Agresión física grave", "Agresión física reiterada"], 
-    dano: "Físico" 
-  },
-  "Sexual": { 
-    agresiones: ["Acoso sexual", "Sexteo", "Violencia sexual"], 
-    dano: "Sexual" 
-  },
-  "Psicológico": { 
-    agresiones: ["Agresión Verbal", "Agresión gestual", "Violencia Intrafamiliar", "Agresión electrónica"], 
-    dano: "Psicológico" 
-  },
-}
-
-// Lista plana de todas las agresiones
-const tiposAgresion = [
-  "Hurto",
-  "Acoso escolar", 
-  "Violencia Intrafamiliar", 
-  "Agresión física grave", 
-  "Agresión física reiterada",
-  "Acoso sexual", 
-  "Sexteo", 
-  "Violencia sexual",
-  "Agresión Verbal",
-  "Agresión gestual",
-  "Agresión electrónica",
-] as const
-
-const eventosGeneradores = ["Consumo de SPA", "Discriminación", "Conflicto", "Otro"] as const
-const rolesAgresor = ["Estudiante", "Docente", "Familiar", "Administrativo", "Desconocido", "Vecino"] as const
-const lugares = ["Calle", "Casa", "Colegio", "Redes Sociales"] as const
-
-// Acciones I.E. con sus porcentajes
-const accionesIE = [
-  { label: "Sin acciones", value: 0 },
-  { label: "Entrevista estudiantes", value: 12.5 },
-  { label: "Citación de los padres", value: 25 },
-  { label: "Atención orientación escolar", value: 37.5 },
-  { label: "Activación de ruta de CE", value: 50 },
-  { label: "Llamado de atención y reporte", value: 62.5 },
-  { label: "Seguimiento a la ruta", value: 75 },
-  { label: "Taller pedagógico", value: 87.5 },
-  { label: "Solución del caso", value: 100 },
-  { label: "Suspensión pedagógica", value: -25 },
-  { label: "Reubicación de docente", value: -50 },
-  { label: "Traslado de estudiante", value: -75 },
-  { label: "Cancelación de matrícula", value: -100 },
-] as const
-
-// Acciones S.E.M. con sus porcentajes
-const accionesSEM = [
-  { label: "No se radicó", value: 0 },
-  { label: "Radicación", value: 14.3 },
-  { label: "Requerimiento activación de ruta", value: 28.6 },
-  { label: "Citación de las partes", value: 42.9 },
-  { label: "Acompañamiento Comité Escolar", value: 57.1 },
-  { label: "Charla/intervención en la IE", value: 71.4 },
-  { label: "Charla pedagógica", value: 71.4 },
-  { label: "Traslado del docente", value: 85.7 },
-  { label: "Archivo de la diligencia", value: 100 },
-] as const
-
-// Función para obtener el daño automático basado en el tipo de agresión
-function getDanoAutomatico(tipoAgresion: string): string | undefined {
-  for (const [, config] of Object.entries(tiposAgresionConDano)) {
-    if (config.agresiones.includes(tipoAgresion)) {
-      return config.dano
-    }
-  }
-  return undefined
-}
-
-// Función para calcular clasificación automáticamente según Ley 1620
-function calcularClasificacion(
-  danoPrincipal: string,
-  danoSecundario?: string,
-  danoTerciario?: string,
-  repetitivo?: boolean
-): "Tipo 1" | "Tipo 2" | "Tipo 3" {
-  // Si hay daño sexual, siempre es Tipo 3
-  if (danoPrincipal === "Sexual" || danoSecundario === "Sexual" || danoTerciario === "Sexual") {
-    return "Tipo 3"
-  }
-  // Si es repetitivo o hay daño físico con otros daños, es Tipo 2
-  if (repetitivo || (danoPrincipal === "Físico" && (danoSecundario || danoTerciario))) {
-    return "Tipo 2"
-  }
-  // Si hay daño físico grave solo, puede ser Tipo 2
-  if (danoPrincipal === "Físico") {
-    return "Tipo 2"
-  }
-  // Caso básico - psicológico o económico sin agravantes
-  return "Tipo 1"
-}
-
-// Función para calcular el estado basado en el avance general
-function calcularEstado(avanceGeneral: number): "PENDIENTE" | "EN PROGRESO" | "TERMINADO" {
-  if (avanceGeneral === 0) return "PENDIENTE"
-  if (avanceGeneral >= 100) return "TERMINADO"
-  return "EN PROGRESO"
+  "Económico": { agresiones: ["Hurto"], dano: "Económico" },
+  "Físico": { agresiones: ["Acoso escolar", "Violencia Intrafamiliar", "Agresión física ocasional leve", "Agresión Física", "Agresión física reiterada"], dano: "Físico" },
+  "Sexual": { agresiones: ["Acoso sexual", "Sexteo", "Violencia sexual"], dano: "Sexual" },
+  "Psicológico": { agresiones: ["Agresión Verbal", "Agresión Verbal Reiterada", "Agresión gestual",  "Agresión Relacional"], dano: "Psicológico" },
 }
 
 export default function NuevoCasoSIUCEPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState("")
   const [showOtroEvento, setShowOtroEvento] = useState(false)
   
-  // Estados para seguimientos condicionales
+  // 1. Estados de Catálogos Administrables
+  const [instituciones, setInstituciones] = useState<any[]>([])
+  const [tiposIdentificacion, setTiposIdentificacion] = useState<any[]>([])
+  const [grados, setGrados] = useState<any[]>([])
+  const [tiposDano, setTiposDano] = useState<any[]>([])
+  const [tiposAgresion, setTiposAgresion] = useState<any[]>([])
+  const [eventosGeneradores, setEventosGeneradores] = useState<any[]>([])
+  const [rolesAgresor, setRolesAgresor] = useState<any[]>([])
+  const [lugares, setLugares] = useState<any[]>([])
+  const [accionesIE, setAccionesIE] = useState<any[]>([])
+  const [accionesSEM, setAccionesSEM] = useState<any[]>([])
+  const [clasificaciones, setClasificaciones] = useState<any[]>([])
   const [seguimientoIE, setSeguimientoIE] = useState(false)
   const [seguimientoPolicia, setSeguimientoPolicia] = useState(false)
-  
-  // Estados para avances
   const [avanceIE, setAvanceIE] = useState(0)
   const [avanceSEM, setAvanceSEM] = useState(0)
   const [avanceGeneral, setAvanceGeneral] = useState(0)
-  const [estadoCalculado, setEstadoCalculado] = useState<"PENDIENTE" | "EN PROGRESO" | "TERMINADO">("PENDIENTE")
-
+  const [estadoCalculado, setEstadoCalculado] = useState<"PENDIENTE" | "EN SEGUIMIENTO" | "TERMINADO">("PENDIENTE")
   const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
+    register, handleSubmit, setValue, watch, clearErrors, setError: setFieldError, formState: { errors },
   } = useForm<CasoSIUCEFormData>({
     resolver: zodResolver(casoSIUCESchema),
-    defaultValues: {
-      avanceGeneral: 0,
-      estado: "PENDIENTE",
-      repetitivo: false,
-      seguimientoIE: false,
-      numeroSeguimientoIE: 0,
-      seguimientoPolicia: false,
-      numeroSeguimientoPolicia: 0,
-      cec: false,
-      avanceIE: 0,
-      avanceSEM: 0,
-      clasificacion: "Tipo 1",
-    },
+    defaultValues: { avanceGeneral: 0, estado: "PENDIENTE", repetitivo: false, seguimientoIE: false, numeroSeguimientoIE: 0, seguimientoPolicia: false, numeroSeguimientoPolicia: 0, cec: false, avanceIE: 0, avanceSEM: 0, clasificacion: "Tipo 1" },
   })
-
   const tipoAgresion = watch("tipoAgresion")
   const danoPrincipal = watch("danoPrincipal")
-  const danoSecundario = watch("danoSecundario")
-  const danoTerciario = watch("danoTerciario")
   const repetitivo = watch("repetitivo")
   const eventoGenerador = watch("eventoGenerador")
 
-  // Actualizar daño automáticamente cuando cambia el tipo de agresión
   useEffect(() => {
-    if (tipoAgresion) {
-      const danoAutomatico = getDanoAutomatico(tipoAgresion)
-      if (danoAutomatico) {
-        setValue("danoPrincipal", danoAutomatico as CasoSIUCEFormData["danoPrincipal"])
+    const inicializarCatalogos = async () => {
+      try {
+        const [
+          resIE, resIdentificacion, resGrados, resDano, resAgresion,
+          resEventos, resRoles, resLugares, resAccionesIE, resAccionesSEM, resClasificaciones
+        ] = await Promise.allSettled([
+          api.obtenerInstituciones(),
+          api.getTiposIdentificacion(),
+          api.getGradosEscolaridad(),
+          api.getTiposDano(),
+          api.getTiposAgresion(),
+          api.getEventosGeneradores(),
+          api.getRolesAgresor(),
+          api.getLugaresHechos(),
+          api.getAccionesIE(),
+          api.getAccionesSEM(),
+          api.getClasificaciones()
+        ])
+
+        const extractData = (result: any) => {
+          if (result.status === "fulfilled") {
+            const data = result.value.results || result.value;
+            return Array.isArray(data) ? data.filter((item: any) => item.activo !== false) : [];
+          }
+          return [];
+        };
+
+        setInstituciones(extractData(resIE))
+        setTiposIdentificacion(extractData(resIdentificacion))
+        setGrados(extractData(resGrados))
+        setTiposDano(extractData(resDano))
+        setTiposAgresion(extractData(resAgresion))
+        setEventosGeneradores(extractData(resEventos))
+        setRolesAgresor(extractData(resRoles))
+        setLugares(extractData(resLugares))
+        setAccionesIE(extractData(resAccionesIE))
+        setAccionesSEM(extractData(resAccionesSEM))
+        setClasificaciones(extractData(resClasificaciones))
+        
+      } catch (error) {
+        console.error("Error crítico al cargar catálogos.", error)
+      } finally {
+        setLoadingData(false)
       }
     }
-  }, [tipoAgresion, setValue])
+    inicializarCatalogos()
+  }, [])
 
-  // Actualizar clasificación automáticamente
   useEffect(() => {
-    if (danoPrincipal) {
-      const clasificacion = calcularClasificacion(danoPrincipal, danoSecundario, danoTerciario, repetitivo)
-      setValue("clasificacion", clasificacion)
+    if (tipoAgresion && tiposAgresion.length > 0 && tiposDano.length > 0) {
+      const objAgresion = tiposAgresion.find(a => a.id?.toString() === tipoAgresion);
+      
+      if (objAgresion) {
+        const nombreAgresion = objAgresion.tipo_agresion.toLowerCase().trim();
+        let nombreCategoria = "";
+
+        for (const [categoria, config] of Object.entries(tiposAgresionConDano)) {
+          if (config.agresiones.some(a => a.toLowerCase().trim() === nombreAgresion)) {
+            nombreCategoria = categoria.toLowerCase();
+            break;
+          }
+        }
+
+        if (nombreCategoria) {
+          const danoReal = tiposDano.find(d => d.tipo_dano.toLowerCase().includes(nombreCategoria));
+          if (danoReal) {
+            setValue("danoPrincipal", danoReal.id.toString(), { shouldValidate: true });
+            return;
+          }
+        }
+      }
+      setValue("danoPrincipal", "", { shouldValidate: true });
     }
-  }, [danoPrincipal, danoSecundario, danoTerciario, repetitivo, setValue])
+  }, [tipoAgresion, tiposAgresion, tiposDano, setValue]);
 
-  // Mostrar campo "otro" si se selecciona
   useEffect(() => {
-    setShowOtroEvento(eventoGenerador === "Otro")
-  }, [eventoGenerador])
+    if (danoPrincipal && tiposDano.length > 0 && clasificaciones.length > 0) {
+      const objDano = tiposDano.find(d => d.id?.toString() === danoPrincipal);
+      const nombreDano = objDano?.tipo_dano?.toLowerCase() || "";
 
-  // Calcular avance general (promedio de avances I.E. y S.E.M.)
+      let tipoCalculado = "Tipo 1";
+      if (nombreDano.includes("sexual")) {
+        tipoCalculado = "Tipo 3";
+      } else if (repetitivo || nombreDano.includes("físico") || nombreDano.includes("fisico")) {
+        tipoCalculado = "Tipo 2";
+      }
+
+      const clasificacionReal = clasificaciones.find(c => c.descripcion?.toLowerCase().includes(tipoCalculado.toLowerCase()));
+      if (clasificacionReal) {
+        setValue("clasificacion", clasificacionReal.id.toString(), { shouldValidate: true });
+      }
+    }
+  }, [danoPrincipal, repetitivo, tiposDano, clasificaciones, setValue]);
+
   useEffect(() => {
-    const promedio = Math.round((avanceIE + avanceSEM) / 2)
-    setAvanceGeneral(promedio)
-    setValue("avanceGeneral", promedio)
+    const suma = avanceIE + avanceSEM;
+    setAvanceGeneral(suma);
+    setValue("avanceGeneral", suma, { shouldValidate: true });
     
-    // Calcular estado automáticamente
-    const estado = calcularEstado(promedio)
-    setEstadoCalculado(estado)
-    setValue("estado", estado)
-  }, [avanceIE, avanceSEM, setValue])
+    let estadoActual: "PENDIENTE" | "EN SEGUIMIENTO" | "TERMINADO" = "EN SEGUIMIENTO";
+    if (suma <= 0) estadoActual = "PENDIENTE";
+    else if (suma >= 100) estadoActual = "TERMINADO";
 
- const onSubmit = async (data: CasoSIUCEFormData) => {
-  setError("")
-  setIsLoading(true)
-  
-  try {
-    // Validar caracteres especiales en campos de texto
-    if (hasSpecialChars(data.victima) || hasSpecialChars(data.nombreAgresor)) {
-      setError(SPECIAL_CHARS_ERROR)
+    setEstadoCalculado(estadoActual);
+    setValue("estado", estadoActual, { shouldValidate: true });
+  }, [avanceIE, avanceSEM, setValue]);
+
+  useEffect(() => {
+    if (eventoGenerador) {
+      const objEvento = eventosGeneradores.find(e => e.id?.toString() === eventoGenerador);
+      setShowOtroEvento(objEvento?.evento_generador?.toLowerCase().includes("otro") || false);
+    }
+  }, [eventoGenerador, eventosGeneradores]);
+
+  const onSubmit = async (data: CasoSIUCEFormData) => {
+    setError("")
+    setIsLoading(true)
+    
+    try {
+      if (hasSpecialChars(data.victima) || hasSpecialChars(data.nombreAgresor)) {
+        setError(SPECIAL_CHARS_ERROR); setIsLoading(false); return;
+      }
+
+      const payloadBackend = {
+        num_radicado_siuce: data.radicado,
+        institucion_educativa: parseInt(data.ie),
+        fecha_registro: data.fechaRegistro,
+        estudiante_victima: sanitizeText(data.victima),
+        tipo_identificacion: parseInt(data.tipoIdentificacion),
+        num_indentificacion: data.numeroIdentificacion,
+        grado_escolaridad: parseInt(data.grado),
+        tipo_agresion: parseInt(data.tipoAgresion),
+        dano_principal: data.danoPrincipal ? parseInt(data.danoPrincipal) : null,
+        dano_secundario: data.danoSecundario && data.danoSecundario !== "none" ? parseInt(data.danoSecundario)|| "N/A" : null,
+        dano_terciario: data.danoTerciario && data.danoTerciario !== "none" ? parseInt(data.danoTerciario) || "N/A" : null,
+        repetitivo: data.repetitivo,
+        evento_generador: parseInt(data.eventoGenerador),
+        otro_evento_generador: data.otroEventoGenerador ? sanitizeText(data.otroEventoGenerador) || "N/A" : null,
+        rol_agresor: parseInt(data.rolAgresor),
+        nombre_agresor: sanitizeText(data.nombreAgresor),
+        clasificacion: data.clasificacion ? parseInt(data.clasificacion) : null,
+        lugar_hechos: parseInt(data.lugar),
+        fecha_ocurrencia: data.fechaOcurrencia,
+        seguimiento_ie: data.seguimientoIE,
+        num_seguimiento_ie: data.numeroSeguimientoIE?.toString() || "N/A",
+        seguimiento_policia: data.seguimientoPolicia,
+        num_seguimiento_policia: data.numeroSeguimientoPolicia?.toString() || "N/A",
+        cec: data.cec,
+        accion_ie: data.accionesIE ? parseInt(data.accionesIE) : null,
+        accion_sem: data.accionesSEM ? parseInt(data.accionesSEM) : null,
+        descripcion_avance: data.descripcionAvance ? sanitizeText(data.descripcionAvance) : "Sin descripción",
+        rad_entidad_ext: data.entidadesExternas || "",
+        fecha_rad_entidad_ext: data.fechaRadicadoExternas || null,
+      }
+
+      await api.crearCasoSIUCE(payloadBackend)
+      router.push("/lider/siuce")
+
+    } catch (err: any) {
+      try {
+        const errorData = JSON.parse(err.message);
+        let errorEncontrado = false
+
+        if (errorData.num_radicado_siuce) {
+          setFieldError("radicado", { type: "server", message: "Este radicado ya existe en la base de datos." })
+          errorEncontrado = true
+        }
+        if (errorData.num_indentificacion) {
+          setFieldError("numeroIdentificacion", { type: "server", message: "Este número de identificación ya está registrado." })
+          errorEncontrado = true
+        }
+
+        if (!errorEncontrado) setError("Django rechazó los datos: " + JSON.stringify(errorData))
+      } catch (e) {
+        setError("Error de comunicación con el servidor. Revisa la consola para más detalles.")
+      }
+    } finally {
       setIsLoading(false)
-      return
     }
+  }
 
-    // Validar que el radicado sea unico
-    if (isRadicadoSIUCEDuplicado(data.radicado)) {
-      setError("El radicado ya existe en el sistema. Por favor ingrese un radicado unico.")
-      setIsLoading(false)
-      return
-    }
+  const getDanoNombre = (id: string) => tiposDano.find(d => d.id?.toString() === id)?.tipo_dano || "Se asigna al seleccionar agresión";
+  const getClasificacionNombre = (id: string) => clasificaciones.find(c => c.id?.toString() === id)?.descripcion || "Tipo 1";
 
-    // Validar que el numero de identificacion sea unico
-    if (isIdentificacionSIUCEDuplicada(data.numeroIdentificacion)) {
-      setError("El numero de identificacion ya existe en el sistema. Por favor verifique los datos.")
-      setIsLoading(false)
-      return
-    }
-
-    // Normalizar campos de texto a mayusculas sin tildes
-    const normalizedData: CasoSIUCEFormData = {
-      ...data,
-      victima: sanitizeText(data.victima),
-      nombreAgresor: sanitizeText(data.nombreAgresor),
-      descripcionAvance: data.descripcionAvance ? sanitizeText(data.descripcionAvance) : data.descripcionAvance,
-      otroEventoGenerador: data.otroEventoGenerador ? sanitizeText(data.otroEventoGenerador) : data.otroEventoGenerador,
-    }
-
-    createCaseSIUCE(normalizedData as any) // Guardar el caso en el almacenamiento local
-    router.push("/lider/siuce")
-  } catch (err) {
-    setError("Error al guardar el caso. Intente nuevamente.")
-  } finally {
-    setIsLoading(false)
-    }
+  if (loadingData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <p className="text-xs text-slate-500 mt-2 font-medium">Sincronizando catálogos de SIUCE...</p>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/lider/siuce">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Nuevo Caso SIUCE</h1>
@@ -297,42 +270,48 @@ export default function NuevoCasoSIUCEPage() {
         </div>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+      <form onSubmit={handleSubmit(onSubmit, (err) => console.log("Errores RHF:", err))} className="space-y-6">
+        <input type="hidden" {...register("danoPrincipal")} />
+        <input type="hidden" {...register("clasificacion")} />
+        <input type="hidden" {...register("avanceGeneral")} />
+        <input type="hidden" {...register("estado")} />
+        <input type="hidden" {...register("avanceIE")} />
+        <input type="hidden" {...register("avanceSEM")} />
 
-        {/* Identificación del Caso */}
+        {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+
+        {/* IDENTIFICACIÓN DEL CASO */}
         <Card>
-          <CardHeader>
-            <CardTitle>Identificación del Caso</CardTitle>
-            <CardDescription>Datos básicos de identificación del caso</CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>Identificación del Caso</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="radicado">Radicado *</Label>
-                <Input
-                  id="radicado"
-                  placeholder="Ej: 35024"
-                  {...register("radicado")}
-                  className={errors.radicado ? "border-red-500" : ""}
+                <Input 
+                  id="radicado" 
+                  placeholder="Ej: 1234567890" 
+                  maxLength={10}
+                  {...register("radicado", { 
+                    onChange: (e) => { 
+                      e.target.value = e.target.value.replace(/\D/g, '');
+                      clearErrors("radicado"); 
+                      setError(""); 
+                    } 
+                  })} 
+                  className={errors.radicado ? "border-red-500" : ""} 
                 />
                 {errors.radicado && <p className="text-sm text-red-500">{errors.radicado.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="ie">Institución Educativa *</Label>
-                <Select onValueChange={(value) => setValue("ie", value)}>
+                <Select onValueChange={(value) => { setValue("ie", value, { shouldValidate: true }); }}>
                   <SelectTrigger className={errors.ie ? "border-red-500" : ""}>
                     <SelectValue placeholder="Selecciona la I.E." />
                   </SelectTrigger>
                   <SelectContent>
-                    {instituciones.map((ie) => (
-                      <SelectItem key={ie} value={ie}>{ie}</SelectItem>
+                    {instituciones.map((inst) => (
+                      <SelectItem key={inst.id?.toString()} value={inst.id?.toString()}>{inst.nombre}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -341,47 +320,32 @@ export default function NuevoCasoSIUCEPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="fechaRegistro">Fecha de Registro *</Label>
-                <Input
-                  id="fechaRegistro"
-                  type="date"
-                  {...register("fechaRegistro")}
-                  className={errors.fechaRegistro ? "border-red-500" : ""}
-                />
-                {errors.fechaRegistro && <p className="text-sm text-red-500">{errors.fechaRegistro.message}</p>}
+                <Input id="fechaRegistro" type="date" {...register("fechaRegistro")} className={errors.fechaRegistro ? "border-red-500" : ""} />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Información de la Víctima */}
+        {/* INFORMACIÓN DE LA VÍCTIMA */}
         <Card>
-          <CardHeader>
-            <CardTitle>Información de la Víctima</CardTitle>
-            <CardDescription>Datos del estudiante afectado</CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>Información de la Víctima</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="victima">Nombre de la Víctima *</Label>
-                <Input
-                  id="victima"
-                  placeholder="Nombre en mayúsculas"
-                  {...register("victima")}
-                  className={errors.victima ? "border-red-500" : ""}
-                  style={{ textTransform: "uppercase" }}
-                />
+                <Input id="victima" placeholder="Nombre completo" {...register("victima")} className={errors.victima ? "border-red-500 uppercase" : "uppercase"} />
                 {errors.victima && <p className="text-sm text-red-500">{errors.victima.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="tipoIdentificacion">Tipo de Identificación *</Label>
-                <Select onValueChange={(value) => setValue("tipoIdentificacion", value as CasoSIUCEFormData["tipoIdentificacion"])}>
+                <Select onValueChange={(value) => { setValue("tipoIdentificacion", value as any, { shouldValidate: true }); }}>
                   <SelectTrigger className={errors.tipoIdentificacion ? "border-red-500" : ""}>
                     <SelectValue placeholder="Selecciona tipo" />
                   </SelectTrigger>
                   <SelectContent>
                     {tiposIdentificacion.map((tipo) => (
-                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                      <SelectItem key={tipo.id?.toString()} value={tipo.id?.toString()}>{tipo.tipo_identificacion}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -390,24 +354,36 @@ export default function NuevoCasoSIUCEPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="numeroIdentificacion">Número de Identificación *</Label>
-                <Input
-                  id="numeroIdentificacion"
-                  placeholder="Sin separadores (Ej: 1092537583)"
-                  {...register("numeroIdentificacion")}
-                  className={errors.numeroIdentificacion ? "border-red-500" : ""}
+                <Input 
+                  id="numeroIdentificacion" 
+                  placeholder="Ej: 1090123456" 
+                  maxLength={10}
+                  {...register("numeroIdentificacion", { 
+                    onChange: (e) => { 
+                      e.target.value = e.target.value.replace(/\D/g, ''); 
+                      clearErrors("numeroIdentificacion"); 
+                      setError(""); 
+                    } 
+                  })} 
+                  className={errors.numeroIdentificacion ? "border-red-500" : ""} 
                 />
+                <p className="text-xs text-slate-500">
+
+                  {(watch("numeroIdentificacion")?.length ?? 0)}/10 dígitos
+
+                </p>
                 {errors.numeroIdentificacion && <p className="text-sm text-red-500">{errors.numeroIdentificacion.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="grado">Grado *</Label>
-                <Select onValueChange={(value) => setValue("grado", value as CasoSIUCEFormData["grado"])}>
+                <Select onValueChange={(value) => { setValue("grado", value as any, { shouldValidate: true }); }}>
                   <SelectTrigger className={errors.grado ? "border-red-500" : ""}>
                     <SelectValue placeholder="Selecciona el grado" />
                   </SelectTrigger>
                   <SelectContent>
-                    {grados.map((grado) => (
-                      <SelectItem key={grado} value={grado}>{grado}</SelectItem>
+                    {grados.map((g) => (
+                      <SelectItem key={g.id?.toString()} value={g.id?.toString()}>{g.nom_grado}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -417,52 +393,47 @@ export default function NuevoCasoSIUCEPage() {
           </CardContent>
         </Card>
 
-        {/* Tipo de Agresión y Daño */}
+        {/* TIPO DE AGRESIÓN Y DAÑO */}
         <Card>
-          <CardHeader>
-            <CardTitle>Tipo de Agresión y Daño</CardTitle>
-            <CardDescription>
-              El tipo de daño se selecciona automáticamente según el tipo de agresión (Ley 1620 de 2013)
-            </CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>Tipo de Agresión y Daño</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="tipoAgresion">Tipo de Agresión *</Label>
-                <Select onValueChange={(value) => setValue("tipoAgresion", value as CasoSIUCEFormData["tipoAgresion"])}>
+                <Select onValueChange={(value) => { setValue("tipoAgresion", value as any, { shouldValidate: true }); }}>
                   <SelectTrigger className={errors.tipoAgresion ? "border-red-500" : ""}>
                     <SelectValue placeholder="Selecciona el tipo" />
                   </SelectTrigger>
                   <SelectContent>
                     {tiposAgresion.map((tipo) => (
-                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                      <SelectItem key={tipo.id?.toString()} value={tipo.id?.toString()}>{tipo.tipo_agresion}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {errors.tipoAgresion && <p className="text-sm text-red-500">{errors.tipoAgresion.message}</p>}
               </div>
 
+              {/* DAÑO PRINCIPAL AUTOMÁTICO */}
               <div className="space-y-2">
                 <Label htmlFor="danoPrincipal">Daño Principal (Automático)</Label>
-                <div className="flex items-center h-10 px-3 rounded-md border bg-slate-50">
-                  <span className="font-medium">{danoPrincipal || "Se asigna al seleccionar agresión"}</span>
+                <div className={`flex items-center h-10 px-3 rounded-md border ${errors.danoPrincipal ? 'border-red-500 bg-red-50 text-red-500' : 'bg-slate-50'}`}>
+                  <span className="font-medium">
+                    {getDanoNombre(watch("danoPrincipal"))}
+                  </span>
                 </div>
-                <p className="text-xs text-slate-500 flex items-center gap-1">
-                  <Info className="h-3 w-3" />
-                  Calculado según tipo de agresión
-                </p>
+                {errors.danoPrincipal && (
+                  <p className="text-sm text-red-500">Agresión no tipificada en Ley 1620 del 2013.</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="danoSecundario">Daño Secundario</Label>
-                <Select onValueChange={(value) => setValue("danoSecundario", value === "none" ? undefined : value as CasoSIUCEFormData["danoSecundario"])}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Opcional" />
-                  </SelectTrigger>
+                <Select onValueChange={(value) => setValue("danoSecundario", value === "none" ? undefined : value as any, { shouldValidate: true })}>
+                  <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Ninguno</SelectItem>
                     {tiposDano.map((dano) => (
-                      <SelectItem key={dano} value={dano}>{dano}</SelectItem>
+                      <SelectItem key={dano.id?.toString()} value={dano.id?.toString()}>{dano.tipo_dano}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -470,14 +441,12 @@ export default function NuevoCasoSIUCEPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="danoTerciario">Daño Terciario</Label>
-                <Select onValueChange={(value) => setValue("danoTerciario", value === "none" ? undefined : value as CasoSIUCEFormData["danoTerciario"])}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Opcional" />
-                  </SelectTrigger>
+                <Select onValueChange={(value) => setValue("danoTerciario", value === "none" ? undefined : value as any, { shouldValidate: true })}>
+                  <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Ninguno</SelectItem>
                     {tiposDano.map((dano) => (
-                      <SelectItem key={dano} value={dano}>{dano}</SelectItem>
+                      <SelectItem key={dano.id?.toString()} value={dano.id?.toString()}>{dano.tipo_dano}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -485,13 +454,13 @@ export default function NuevoCasoSIUCEPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="eventoGenerador">Evento Generador *</Label>
-                <Select onValueChange={(value) => setValue("eventoGenerador", value as CasoSIUCEFormData["eventoGenerador"])}>
+                <Select onValueChange={(value) => { setValue("eventoGenerador", value as any, { shouldValidate: true }); }}>
                   <SelectTrigger className={errors.eventoGenerador ? "border-red-500" : ""}>
                     <SelectValue placeholder="Selecciona evento" />
                   </SelectTrigger>
                   <SelectContent>
                     {eventosGeneradores.map((evento) => (
-                      <SelectItem key={evento} value={evento}>{evento}</SelectItem>
+                      <SelectItem key={evento.id?.toString()} value={evento.id?.toString()}>{evento.evento_generador}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -501,343 +470,197 @@ export default function NuevoCasoSIUCEPage() {
               {showOtroEvento && (
                 <div className="space-y-2">
                   <Label htmlFor="otroEventoGenerador">Especifique Otro Evento</Label>
-                  <Input
-                    id="otroEventoGenerador"
-                    placeholder="Describa el evento"
-                    {...register("otroEventoGenerador")}
-                  />
+                  <Input id="otroEventoGenerador" placeholder="Describa el evento" {...register("otroEventoGenerador")} />
                 </div>
               )}
 
               <div className="flex items-center space-x-3 pt-6">
-                <Switch
-                  id="repetitivo"
-                  onCheckedChange={(checked) => setValue("repetitivo", checked)}
-                />
+                <Switch id="repetitivo" onCheckedChange={(checked) => setValue("repetitivo", checked, { shouldValidate: true })} />
                 <Label htmlFor="repetitivo">¿Es conducta repetitiva?</Label>
               </div>
 
+              {/* CLASIFICACIÓN AUTOMÁTICA */}
               <div className="space-y-2">
                 <Label>Clasificación (Automática)</Label>
                 <div className="flex items-center h-10 px-3 rounded-md border bg-slate-50">
-                  <Badge variant="outline" className={
-                    watch("clasificacion") === "Tipo 3" ? "bg-red-100 text-red-800 border-red-200" :
-                    watch("clasificacion") === "Tipo 2" ? "bg-orange-100 text-orange-800 border-orange-200" :
-                    "bg-yellow-100 text-yellow-800 border-yellow-200"
-                  }>
-                    {watch("clasificacion") || "Tipo 1"}
+                  <Badge variant="outline" className={watch("clasificacion") === "Tipo 3" ? "bg-red-100 text-red-800 border-red-200" : watch("clasificacion") === "Tipo 2" ? "bg-orange-100 text-orange-800 border-orange-200" : "bg-yellow-100 text-yellow-800 border-yellow-200"}>
+                    {getClasificacionNombre(watch("clasificacion"))}
                   </Badge>
                 </div>
-                <p className="text-xs text-slate-500">Calculada según Ley 1620 de 2013</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Información del Agresor */}
+        {/* INFORMACIÓN DEL AGRESOR */}
         <Card>
-          <CardHeader>
-            <CardTitle>Información del Agresor</CardTitle>
-            <CardDescription>Datos de la persona agresora</CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>Información del Agresor</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="rolAgresor">Rol del Agresor *</Label>
-                <Select onValueChange={(value) => setValue("rolAgresor", value as CasoSIUCEFormData["rolAgresor"])}>
-                  <SelectTrigger className={errors.rolAgresor ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Selecciona el rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rolesAgresor.map((rol) => (
-                      <SelectItem key={rol} value={rol}>{rol}</SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select onValueChange={(value) => { setValue("rolAgresor", value as any, { shouldValidate: true }); }}>
+                  <SelectTrigger className={errors.rolAgresor ? "border-red-500" : ""}><SelectValue placeholder="Selecciona el rol" /></SelectTrigger>
+                  <SelectContent>{rolesAgresor.map((rol) => (<SelectItem key={rol.id?.toString()} value={rol.id?.toString()}>{rol.nom_rol_agresor}</SelectItem>))}</SelectContent>
                 </Select>
                 {errors.rolAgresor && <p className="text-sm text-red-500">{errors.rolAgresor.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="nombreAgresor">Nombre del Agresor *</Label>
-                <Input
-                  id="nombreAgresor"
-                  placeholder="Nombre en mayúsculas"
-                  {...register("nombreAgresor")}
-                  className={errors.nombreAgresor ? "border-red-500" : ""}
-                  style={{ textTransform: "uppercase" }}
-                />
+                <Input id="nombreAgresor" placeholder="Nombre completo" {...register("nombreAgresor")} className={errors.nombreAgresor ? "border-red-500 uppercase" : "uppercase"} />
                 {errors.nombreAgresor && <p className="text-sm text-red-500">{errors.nombreAgresor.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="lugar">Lugar *</Label>
-                <Select onValueChange={(value) => setValue("lugar", value as CasoSIUCEFormData["lugar"])}>
-                  <SelectTrigger className={errors.lugar ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Selecciona el lugar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lugares.map((lugar) => (
-                      <SelectItem key={lugar} value={lugar}>{lugar}</SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select onValueChange={(value) => { setValue("lugar", value as any, { shouldValidate: true }); }}>
+                  <SelectTrigger className={errors.lugar ? "border-red-500" : ""}><SelectValue placeholder="Selecciona el lugar" /></SelectTrigger>
+                  <SelectContent>{lugares.map((l) => (<SelectItem key={l.id?.toString()} value={l.id?.toString()}>{l.nom_lugar}</SelectItem>))}</SelectContent>
                 </Select>
                 {errors.lugar && <p className="text-sm text-red-500">{errors.lugar.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="fechaOcurrencia">Fecha de Ocurrencia *</Label>
-                <Input
-                  id="fechaOcurrencia"
-                  type="date"
-                  {...register("fechaOcurrencia")}
-                  className={errors.fechaOcurrencia ? "border-red-500" : ""}
-                />
+                <Input id="fechaOcurrencia" type="date" {...register("fechaOcurrencia")} className={errors.fechaOcurrencia ? "border-red-500" : ""} />
                 {errors.fechaOcurrencia && <p className="text-sm text-red-500">{errors.fechaOcurrencia.message}</p>}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Seguimientos */}
+        {/* SEGUIMIENTOS */}
         <Card>
-          <CardHeader>
-            <CardTitle>Seguimientos</CardTitle>
-            <CardDescription>Acciones de seguimiento del caso por parte de I.E. y Policía</CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>Seguimientos</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <Switch
-                    id="seguimientoIE"
-                    checked={seguimientoIE}
-                    onCheckedChange={(checked) => {
-                      setSeguimientoIE(checked)
-                      setValue("seguimientoIE", checked)
-                      if (!checked) {
-                        setValue("numeroSeguimientoIE", 0)
-                      }
-                    }}
-                  />
+                  <Switch id="seguimientoIE" checked={seguimientoIE} onCheckedChange={(checked) => { setSeguimientoIE(checked); setValue("seguimientoIE", checked, { shouldValidate: true }); if (!checked) setValue("numeroSeguimientoIE", 0); }} />
                   <Label htmlFor="seguimientoIE">Seguimiento I.E.</Label>
                 </div>
-                {seguimientoIE && (
-                  <div className="space-y-2">
-                    <Label htmlFor="numeroSeguimientoIE">Número de Seguimientos I.E.</Label>
-                    <Input
-                      id="numeroSeguimientoIE"
-                      type="number"
-                      min="0"
-                      {...register("numeroSeguimientoIE", { valueAsNumber: true })}
-                    />
-                  </div>
-                )}
+                {seguimientoIE && <div className="space-y-2 animate-in fade-in"><Label htmlFor="numeroSeguimientoIE">Número de Seguimientos I.E.</Label><Input id="numeroSeguimientoIE" type="number" min="0" {...register("numeroSeguimientoIE", { valueAsNumber: true })} /></div>}
               </div>
-
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <Switch
-                    id="seguimientoPolicia"
-                    checked={seguimientoPolicia}
-                    onCheckedChange={(checked) => {
-                      setSeguimientoPolicia(checked)
-                      setValue("seguimientoPolicia", checked)
-                      if (!checked) {
-                        setValue("numeroSeguimientoPolicia", 0)
-                      }
-                    }}
-                  />
+                  <Switch id="seguimientoPolicia" checked={seguimientoPolicia} onCheckedChange={(checked) => { setSeguimientoPolicia(checked); setValue("seguimientoPolicia", checked, { shouldValidate: true }); if (!checked) setValue("numeroSeguimientoPolicia", 0); }} />
                   <Label htmlFor="seguimientoPolicia">Seguimiento Policía</Label>
                 </div>
-                {seguimientoPolicia && (
-                  <div className="space-y-2">
-                    <Label htmlFor="numeroSeguimientoPolicia">Número de Seguimientos Policía</Label>
-                    <Input
-                      id="numeroSeguimientoPolicia"
-                      type="number"
-                      min="0"
-                      {...register("numeroSeguimientoPolicia", { valueAsNumber: true })}
-                    />
-                  </div>
-                )}
+                {seguimientoPolicia && <div className="space-y-2 animate-in fade-in"><Label htmlFor="numeroSeguimientoPolicia">Número de Seguimientos Policía</Label><Input id="numeroSeguimientoPolicia" type="number" min="0" {...register("numeroSeguimientoPolicia", { valueAsNumber: true })} /></div>}
               </div>
-
               <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Switch
-                    id="cec"
-                    onCheckedChange={(checked) => setValue("cec", checked)}
-                  />
-                  <Label htmlFor="cec">CEC (Comité Escolar de Convivencia)</Label>
-                </div>
+                <div className="flex items-center space-x-3"><Switch id="cec" onCheckedChange={(checked) => setValue("cec", checked, { shouldValidate: true })} /><Label htmlFor="cec">CEC (Comité Escolar de Convivencia)</Label></div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Acciones y Avances */}
+        {/* ACCIONES Y AVANCES VISUALES */}
         <Card>
-          <CardHeader>
-            <CardTitle>Acciones y Avances</CardTitle>
-            <CardDescription>
-              Los porcentajes de avance se calculan automáticamente según las acciones seleccionadas
-            </CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>Acciones y Avances</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2">
-              {/* Acciones I.E. */}
+              
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="accionesIE">Acciones de I.E.</Label>
                   <Select onValueChange={(value) => {
-                    const accion = accionesIE.find(a => a.label === value)
+                    const accion = accionesIE.find(a => a.id?.toString() === value)
                     if (accion) {
-                      setValue("accionesIE", value)
-                      setAvanceIE(accion.value)
-                      setValue("avanceIE", accion.value)
+                      setValue("accionesIE", value as any, { shouldValidate: true })
+                      const avance = Number(accion.porcentaje || 0)
+                      setAvanceIE(avance); setValue("avanceIE", avance, { shouldValidate: true })
                     }
                   }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona la acción" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Selecciona la acción" /></SelectTrigger>
                     <SelectContent>
-                      {accionesIE.map((accion) => (
-                        <SelectItem key={accion.label} value={accion.label}>
-                          {accion.label} ({accion.value}%)
-                        </SelectItem>
-                      ))}
+                      {accionesIE.map((accion) => {
+                        const avance = Number(accion.porcentaje || 0)
+                        return <SelectItem key={accion.id?.toString()} value={accion.id?.toString()}>{accion.nom_accion_ie} ({avance}%)</SelectItem>
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Avance I.E.</span>
-                    <span className="font-medium">{avanceIE}%</span>
-                  </div>
+                  <div className="flex items-center justify-between text-sm"><span>Avance I.E.</span><span className="font-medium">{avanceIE}%</span></div>
                   <Progress value={Math.max(avanceIE, 0)} className="h-2" />
                 </div>
               </div>
 
-              {/* Acciones S.E.M. */}
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="accionesSEM">Acciones de S.E.M.</Label>
                   <Select onValueChange={(value) => {
-                    const accion = accionesSEM.find(a => a.label === value)
+                    const accion = accionesSEM.find(a => a.id?.toString() === value)
                     if (accion) {
-                      setValue("accionesSEM", value)
-                      setAvanceSEM(accion.value)
-                      setValue("avanceSEM", accion.value)
+                      setValue("accionesSEM", value as any, { shouldValidate: true })
+                      const avance = Number(accion.porcentaje || 0)
+                      setAvanceSEM(avance); setValue("avanceSEM", avance, { shouldValidate: true })
                     }
                   }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona la acción" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Selecciona la acción" /></SelectTrigger>
                     <SelectContent>
-                      {accionesSEM.map((accion) => (
-                        <SelectItem key={accion.label} value={accion.label}>
-                          {accion.label} ({accion.value}%)
-                        </SelectItem>
-                      ))}
+                      {accionesSEM.map((accion) => {
+                        const avance = Number(accion.porcentaje || 0)
+                        return <SelectItem key={accion.id?.toString()} value={accion.id?.toString()}>{accion.nom_accion_sem} ({avance}%)</SelectItem>
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Avance S.E.M.</span>
-                    <span className="font-medium">{avanceSEM}%</span>
-                  </div>
-                  <Progress value={avanceSEM} className="h-2" />
+                  <div className="flex items-center justify-between text-sm"><span>Avance S.E.M.</span><span className="font-medium">{avanceSEM}%</span></div>
+                  <Progress value={Math.max(avanceSEM, 0)} className="h-2" />
                 </div>
               </div>
 
-              {/* Avance General y Estado */}
+              {/* AVANCE GENERAL AUTOMÁTICO */}
               <div className="sm:col-span-2 p-4 rounded-lg bg-slate-50 border">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>Avance General (Automático)</Label>
-                      <span className="text-lg font-bold">{avanceGeneral}%</span>
-                    </div>
+                    <div className="flex items-center justify-between"><Label>Avance General (Automático por el Servidor)</Label><span className="text-lg font-bold">{avanceGeneral}%</span></div>
                     <Progress value={avanceGeneral} className="h-3" />
-                    <p className="text-xs text-slate-500">Promedio de Avance I.E. y Avance S.E.M.</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Estado (Automático)</Label>
                     <div className="flex items-center h-10">
-                      <Badge variant="outline" className={
-                        estadoCalculado === "TERMINADO" ? "bg-green-100 text-green-800 border-green-200" :
-                        estadoCalculado === "EN PROGRESO" ? "bg-blue-100 text-blue-800 border-blue-200" :
-                        "bg-yellow-100 text-yellow-800 border-yellow-200"
-                      }>
+                      <Badge variant="outline" className={estadoCalculado === "TERMINADO" ? "bg-green-100 text-green-800 border-green-200" : estadoCalculado === "EN SEGUIMIENTO" ? "bg-blue-100 text-blue-800 border-blue-200" : "bg-yellow-100 text-yellow-800 border-yellow-200"}>
                         {estadoCalculado}
                       </Badge>
                     </div>
-                    <p className="text-xs text-slate-500">
-                      0% = PENDIENTE | 1-99% = EN PROGRESO | 100% = TERMINADO
-                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="sm:col-span-2 space-y-2">
-                <Label htmlFor="descripcionAvance">Descripción del Avance</Label>
-                <Textarea
-                  id="descripcionAvance"
-                  placeholder="Describe las acciones realizadas..."
-                  rows={3}
-                  {...register("descripcionAvance")}
-                />
+                <Label htmlFor="descripcionAvance">Descripción del Caso</Label>
+                <Textarea id="descripcionAvance" placeholder="Describe los hechos..." rows={3} {...register("descripcionAvance")} className="uppercase" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Entidades Externas */}
+        {/* ENTIDADES EXTERNAS */}
         <Card>
-          <CardHeader>
-            <CardTitle>Entidades Externas</CardTitle>
-            <CardDescription>Respuesta de la SEM a la I.E.</CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>Entidades Externas</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="entidadesExternas">Radicado Entidades Externas</Label>
-                <Input
-                  id="entidadesExternas"
-                  placeholder="Ej: CUC2024EE002434"
-                  {...register("entidadesExternas")}
-                />
+                <Label htmlFor="entidadesExternas">Radicados en Entidades Externas</Label>
+                <Input id="entidadesExternas" placeholder="Ej: CUC2024EE002434" {...register("entidadesExternas")} className="uppercase" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fechaRadicadoExternas">Fecha de Respuesta</Label>
-                <Input
-                  id="fechaRadicadoExternas"
-                  type="date"
-                  {...register("fechaRadicadoExternas")}
-                />
+                <Label htmlFor="fechaRadicadoExternas">Fecha de Radicación en Entidades Externas</Label>
+                <Input id="fechaRadicadoExternas" type="date" {...register("fechaRadicadoExternas")} />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Actions */}
         <div className="flex justify-end gap-4">
-          <Link href="/lider/siuce">
-            <Button type="button" variant="outline">Cancelar</Button>
-          </Link>
-          <Button type="submit" className="bg-orange-600 hover:bg-orange-700" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Guardar Caso
-              </>
-            )}
+          <Link href="/lider/siuce"><Button type="button" variant="outline">Cancelar</Button></Link>
+          <Button type="submit" className="bg-blue-600 hover:bg-blue-700 shadow-sm" disabled={isLoading || loadingData}>
+            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</> : <><Save className="mr-2 h-4 w-4" /> Guardar Caso</>}
           </Button>
         </div>
       </form>
