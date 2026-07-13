@@ -19,7 +19,7 @@ export const api = {
 
   // --- CRUD CASOS SAC ---
   getCasosSAC: async () => {
-    const res = await fetch(`${BASE_URL}/casos_sac/`, { 
+    const res = await fetch(`${BASE_URL}/casos-sac/`, { 
       method: 'GET',
       headers: getAuthHeaders() 
     });
@@ -33,7 +33,7 @@ export const api = {
     return data.results ? data.results : data;
   },
   getCasoSACbyId: async (id: string | number) => {
-    const res = await fetch(`${BASE_URL}/casos_sac/${id}/`, {
+    const res = await fetch(`${BASE_URL}/casos-sac/${id}/`, {
       method: 'GET',
       headers: getAuthHeaders()
     });
@@ -43,7 +43,7 @@ export const api = {
     return await res.json();
   },
   crearCasoSAC: async (datosCaso: any) => {
-    const response = await fetch(`${BASE_URL}/casos_sac/nuevo/`, {
+    const response = await fetch(`${BASE_URL}/casos-sac/nuevo/`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(datosCaso),
@@ -55,7 +55,7 @@ export const api = {
     return response.json();
   },
   actualizarCasoSAC: async (id: string | number, datosCaso: any) => {
-    const response = await fetch(`${BASE_URL}/casos_sac/${id}/`, {
+    const response = await fetch(`${BASE_URL}/casos-sac/${id}/`, {
       method: "PATCH", 
       headers: getAuthHeaders(),
       body: JSON.stringify(datosCaso),
@@ -67,7 +67,7 @@ export const api = {
     return response.json();
   },
   eliminarCasoSAC: async (id: string | number) => {
-    const response = await fetch(`${BASE_URL}/casos_sac/${id}/`, {
+    const response = await fetch(`${BASE_URL}/casos-sac/${id}/`, {
       method: "DELETE",
       headers: getAuthHeaders(),
     });
