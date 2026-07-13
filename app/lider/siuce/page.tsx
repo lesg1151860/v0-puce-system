@@ -12,6 +12,7 @@ import {
   Trash2, AlertTriangle, X, ArrowUpDown, ArrowDown, ArrowUp,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight} from "lucide-react"
 import toast from "react-hot-toast"
+import { InstitucionCombobox } from "@/components/InstitucionCombobox"
 
 const getAuthToken = () => {
   if (typeof window === "undefined") return null
@@ -263,16 +264,17 @@ export default function SIUCEListPage() {
             />
           </div>
           
-          <select 
-            value={filtroInstitucion}
-            onChange={(e) => { setFiltroInstitucion(e.target.value); setCurrentPage(1); }}
-            className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700"
-          >
-            <option value="todas">Todas las I.E.</option>
-            {instituciones.map((inst) => (
-              <option key={inst.id} value={inst.id.toString()}>{inst.nombre || inst.nombre_ie}</option>
-            ))}
-          </select>
+          <div className="w-full sm:w-[300px]"> 
+            <InstitucionCombobox 
+              opciones={[{ id: "todas", nombre: "Todas las I.E." }, ...instituciones]} 
+              value={filtroInstitucion} 
+              onChange={(val) => { 
+                setFiltroInstitucion(val); 
+                setCurrentPage(1); 
+              }}
+              placeholder="Buscar Institución Educativa..."
+            />
+          </div>
           <select 
             value={filtroClasificacion}
             onChange={(e) => { setFiltroClasificacion(e.target.value); setCurrentPage(1); }}
@@ -280,7 +282,7 @@ export default function SIUCEListPage() {
           >
             <option value="todas">Todas las Clasificaciones</option>
             {clasificaciones.map((clas) => (
-              <option key={clas.id} value={clas.id.toString()}>{clas.nombre || clas.clasificacion}</option>
+              <option key={clas.id} value={clas.id.toString()}>{clas.descripcion}</option>
             ))}
           </select>
           <select 
