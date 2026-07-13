@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
 import { ArrowLeft, Loader2, Save } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -17,10 +16,10 @@ import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-
 import { casoSIUCESchema, type CasoSIUCEFormData } from "@/lib/validations"
 import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
 import { api } from "@/lib/api"
+import { InstitucionCombobox } from "@/components/InstitucionCombobox"
 
 // --- MAPEO DE LEY 1620 ---
 const mapaAgresionDano: Record<string, string[]> = {
@@ -342,10 +341,13 @@ export default function EditarCasoSIUCEPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="ie">Institución Educativa *</Label>
-                <Select value={watch("ie")} onValueChange={(value) => setValue("ie", value, { shouldValidate: true })}>
-                  <SelectTrigger className={errors.ie ? "border-red-500" : ""}><SelectValue placeholder="Selecciona la I.E." /></SelectTrigger>
-                  <SelectContent>{instituciones.map((inst) => <SelectItem key={inst.id?.toString()} value={inst.id?.toString()}>{inst.nombre}</SelectItem>)}</SelectContent>
-                </Select>
+                <InstitucionCombobox 
+                    opciones={instituciones} 
+                    value={watch("ie") || ""} 
+                    onChange={(val) => setValue("ie", val, { shouldValidate: true })}
+                    placeholder="Buscar I.E...."
+                />
+                {errors.ie && <p className="text-sm text-red-500">{errors.ie.message}</p>}
               </div>
 
               <div className="space-y-2">

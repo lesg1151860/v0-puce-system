@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
+import { InstitucionCombobox } from "@/components/InstitucionCombobox"
 
 const getAuthToken = () => {
   if (typeof window === "undefined") return null
@@ -394,64 +395,26 @@ export default function EditarCasoSACPage() {
               
               <div className="space-y-2">
                 <Label>Institución de Origen / Principal <span className="text-red-500">*</span></Label>
-                <Select 
-                  value={watch("institucion_1") ? String(watch("institucion_1")) : undefined} 
-                  onValueChange={(val) => {
-                    setValue("institucion_1", val, { shouldValidate: true });
-                    if (errors.institucion_1) setFieldError("institucion_1", { message: "" });
-                  }} 
+                <InstitucionCombobox 
+                  opciones={instituciones.filter(inst => inst.id.toString() !== watch("institucion_2"))} 
+                  value={watch("institucion_1") || ""} 
+                  onChange={(val) => setValue("institucion_1", val, { shouldValidate: true })}
+                  placeholder="Buscar I.E. de origen..."
                   disabled={isLoading || !watchTraslado}
-                >
-                  <SelectTrigger className={errors.institucion_1?.message ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Seleccione la institución..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {instituciones.map((inst) => {
-                      const idVal = inst.id?.toString();
-                      if (!idVal) return null;
-                      const isSelectedIn2 = watch("institucion_2") === idVal;
-                      return (
-                        <SelectItem key={idVal} value={idVal} disabled={isSelectedIn2}>
-                          {inst.nombre || inst.nombre_ie}
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-                {errors.institucion_1?.message && (
-                  <p className="text-xs font-bold text-red-500 mt-1">{errors.institucion_1.message as string}</p>
-                )}
+                />
+                {errors.institucion_1 && <p className="text-sm text-red-500">{String(errors.institucion_1.message ?? "")}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label>Institución Secundaria <span className="text-red-500">*</span></Label>
-                <Select 
-                  value={watch("institucion_2") ? String(watch("institucion_2")) : undefined} 
-                  onValueChange={(val) => {
-                    setValue("institucion_2", val, { shouldValidate: true });
-                    if (errors.institucion_2) setFieldError("institucion_2", { message: "" });
-                  }} 
+                <InstitucionCombobox 
+                  opciones={instituciones.filter(inst => inst.id.toString() !== watch("institucion_1"))} 
+                  value={watch("institucion_2") || ""} 
+                  onChange={(val) => setValue("institucion_2", val, { shouldValidate: true })}
+                  placeholder="Buscar I.E. de destino..."
                   disabled={isLoading || !watchTraslado}
-                >
-                  <SelectTrigger className={errors.institucion_2?.message ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Seleccione de traslado..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {instituciones.map((inst) => {
-                      const idVal = inst.id?.toString();
-                      if (!idVal) return null;
-                      const isSelectedIn1 = watch("institucion_1") === idVal;
-                      return (
-                        <SelectItem key={idVal} value={idVal} disabled={isSelectedIn1}>
-                          {inst.nombre || inst.nombre_ie}
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-                {errors.institucion_2?.message && (
-                  <p className="text-xs font-bold text-red-500 mt-1">{errors.institucion_2.message as string}</p>
-                )}
+                />
+                {errors.institucion_2 && <p className="text-sm text-red-500">{String(errors.institucion_2.message ?? "")}</p>}
               </div>
 
               <div className="space-y-2">

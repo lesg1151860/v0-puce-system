@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
+import { InstitucionCombobox } from "@/components/InstitucionCombobox"
 
 const getAuthToken = () => {
   if (typeof window === "undefined") return null
@@ -389,34 +390,26 @@ export default function NuevoCasoSACPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Institución de Origen / Principal <span className="text-red-500">*</span></Label>
-                <Select value={watch("institucion_1") || ""} onValueChange={(val) => setValue("institucion_1", val, { shouldValidate: true })} disabled={isLoading || !watchTraslado}>
-                  <SelectTrigger className={errors.institucion_1 ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Seleccione la institución..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {instituciones.map((inst) => (
-                      <SelectItem key={inst.id} value={inst.id.toString()}>
-                        {inst.nombre || inst.nombre_ie}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <InstitucionCombobox 
+                  opciones={instituciones.filter(inst => inst.id.toString() !== watch("institucion_2"))} 
+                  value={watch("institucion_1") || ""} 
+                  onChange={(val) => setValue("institucion_1", val, { shouldValidate: true })}
+                  placeholder="Buscar I.E. de origen..."
+                  disabled={isLoading || !watchTraslado}
+                />
+                {errors.institucion_1 && <p className="text-sm text-red-500">{String(errors.institucion_1.message ?? "")}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label>Institución Secundaria <span className="text-red-500">*</span></Label>
-                <Select value={watch("institucion_2") || ""} onValueChange={(val) => setValue("institucion_2", val, { shouldValidate: true })} disabled={isLoading || !watchTraslado}>
-                  <SelectTrigger className={errors.institucion_2 ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Seleccione de traslado..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {instituciones.map((inst) => (
-                      <SelectItem key={inst.id} value={inst.id.toString()}>
-                        {inst.nombre || inst.nombre_ie}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <InstitucionCombobox 
+                  opciones={instituciones.filter(inst => inst.id.toString() !== watch("institucion_1"))} 
+                  value={watch("institucion_2") || ""} 
+                  onChange={(val) => setValue("institucion_2", val, { shouldValidate: true })}
+                  placeholder="Buscar I.E. de destino..."
+                  disabled={isLoading || !watchTraslado}
+                />
+                {errors.institucion_2 && <p className="text-sm text-red-500">{String(errors.institucion_2.message ?? "")}</p>}
               </div>
 
               <div className="space-y-2">

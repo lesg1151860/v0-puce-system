@@ -19,6 +19,8 @@ import { Badge } from "@/components/ui/badge"
 import { casoSIUCESchema, type CasoSIUCEFormData } from "@/lib/validations"
 import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
 import { api } from "@/lib/api"
+// 💡 IMPORTACIÓN DEL NUEVO COMBOBOX
+import { InstitucionCombobox } from "@/components/InstitucionCombobox"
 
 
 const tiposAgresionConDano: Record<string, { agresiones: string[], dano: string }> = {
@@ -160,13 +162,13 @@ export default function NuevoCasoSIUCEPage() {
   }, [danoPrincipal, repetitivo, tiposDano, clasificaciones, setValue]);
 
   useEffect(() => {
-    const suma = avanceIE + avanceSEM;
-    setAvanceGeneral(suma);
-    setValue("avanceGeneral", suma, { shouldValidate: true });
+    const avancegeneral = (avanceIE + avanceSEM)/2;
+    setAvanceGeneral(avancegeneral);
+    setValue("avanceGeneral", avancegeneral, { shouldValidate: true });
     
     let estadoActual: "PENDIENTE" | "EN SEGUIMIENTO" | "TERMINADO" = "EN SEGUIMIENTO";
-    if (suma <= 0) estadoActual = "PENDIENTE";
-    else if (suma >= 100) estadoActual = "TERMINADO";
+    if (avancegeneral <= 0) estadoActual = "PENDIENTE";
+    else if (avancegeneral >= 100) estadoActual = "TERMINADO";
 
     setEstadoCalculado(estadoActual);
     setValue("estado", estadoActual, { shouldValidate: true });
@@ -305,16 +307,12 @@ export default function NuevoCasoSIUCEPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="ie">Institución Educativa *</Label>
-                <Select onValueChange={(value) => { setValue("ie", value, { shouldValidate: true }); }}>
-                  <SelectTrigger className={errors.ie ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Selecciona la I.E." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {instituciones.map((inst) => (
-                      <SelectItem key={inst.id?.toString()} value={inst.id?.toString()}>{inst.nombre}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <InstitucionCombobox 
+                  opciones={instituciones} 
+                  value={watch("ie") || ""} 
+                  onChange={(val) => setValue("ie", val, { shouldValidate: true })}
+                  placeholder="Buscar I.E...."
+                />
                 {errors.ie && <p className="text-sm text-red-500">{errors.ie.message}</p>}
               </div>
 
@@ -368,9 +366,7 @@ export default function NuevoCasoSIUCEPage() {
                   className={errors.numeroIdentificacion ? "border-red-500" : ""} 
                 />
                 <p className="text-xs text-slate-500">
-
                   {(watch("numeroIdentificacion")?.length ?? 0)}/10 dígitos
-
                 </p>
                 {errors.numeroIdentificacion && <p className="text-sm text-red-500">{errors.numeroIdentificacion.message}</p>}
               </div>
@@ -618,7 +614,7 @@ export default function NuevoCasoSIUCEPage() {
               <div className="sm:col-span-2 p-4 rounded-lg bg-slate-50 border">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between"><Label>Avance General (Automático por el Servidor)</Label><span className="text-lg font-bold">{avanceGeneral}%</span></div>
+                    <div className="flex items-center justify-between"><Label>Avance General</Label><span className="text-lg font-bold">{avanceGeneral}%</span></div>
                     <Progress value={avanceGeneral} className="h-3" />
                   </div>
                   <div className="space-y-2">
