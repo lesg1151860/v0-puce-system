@@ -342,17 +342,7 @@ export default function SIUCEListPage() {
                   </th>
                   <th className="px-6 py-4 text-center">Avance General</th>
                   <th className="px-6 py-4 text-center">Clasificación</th>
-                  <th 
-                    className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 transition-colors select-none"
-                    onClick={() => requestSort('registrador')}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      Registrado por
-                      {sortConfig?.key === 'registrador' ? (
-                        sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 text-blue-600" /> : <ArrowDown className="h-4 w-4 text-blue-600" />
-                      ) : <ArrowUpDown className="h-4 w-4 text-slate-400" />}
-                    </div>
-                  </th>
+                  <th className="px-6 py-4 text-center">Registrado por</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
                 </tr>
               </thead>
