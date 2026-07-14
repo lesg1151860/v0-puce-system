@@ -293,14 +293,13 @@ export default function EditarCasoSIUCEPage() {
     }
   }
 
-  // Helpers UI
   const getDanoNombre = (id: string) => tiposDano.find(d => d.id?.toString() === id)?.tipo_dano || "Cargando...";
   const getClasificacionNombre = (id: string) => clasificaciones.find(c => c.id?.toString() === id)?.descripcion || "Calculando...";
 
   if (loadingData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
         <p className="text-xs text-slate-500 mt-2 font-medium">Cargando datos del caso SIUCE...</p>
       </div>
     )
@@ -600,7 +599,7 @@ export default function EditarCasoSIUCEPage() {
 
         <div className="flex justify-end gap-4">
           <Link href="/lider/siuce"><Button type="button" variant="outline">Cancelar</Button></Link>
-          <Button type="submit" className="bg-orange-600 hover:bg-orange-700 shadow-sm" disabled={isLoading || loadingData}>
+          <Button type="submit" className="bg-blue-600 hover:bg-blue-700 shadow-sm" disabled={isLoading || loadingData}>
             {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</> : <><Save className="mr-2 h-4 w-4" /> Actualizar Caso</>}
           </Button>
         </div>
