@@ -11,6 +11,8 @@ import { Plus, Search, FileText, CheckCircle, Clock, Edit2,
 } from "lucide-react"
 import toast from "react-hot-toast"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { InstitucionCombobox } from "@/components/InstitucionCombobox"
 
 const getAuthToken = () => {
   if (typeof window === "undefined") return null
@@ -28,11 +30,16 @@ const formatearTexto = (texto: string) => {
 
 export default function CasosSACPage() {
   const [casos, setCasos] = useState<any[]>([])
-  const [estados, setEstados] = useState<any[]>([]) 
+  const [estados, setEstados] = useState<any[]>([])
+  const [instituciones, setInstituciones] = useState<any[]>([])
+  const [clasificaciones, setClasificaciones] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filtroEstado, setFiltroEstado] = useState<string>("todos")
   const [filtroUsuario, setFiltroUsuario] = useState<string>("todos") 
+  const [filtroIE, setFiltroIE] = useState<string>("todas") 
+  const [filtroRespondido, setFiltroRespondido] = useState<string>("todos")
+  const [filtroInstitucion, setFiltroInstitucion] = useState<string>("todas")
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -49,21 +56,33 @@ export default function CasosSACPage() {
     }
 
     try {
-      const [resCasos, resEstados] = await Promise.all([
+      const [resCasos, resEstados, resIE, resClasif] = await Promise.all([
         fetch("http://127.0.0.1:8000/api/casos-sac/", { headers }),
-        fetch("http://127.0.0.1:8000/api/estado_sac/", { headers })
+        fetch("http://127.0.0.1:8000/api/estado_sac/", { headers }),
+        fetch("http://127.0.0.1:8000/api/institucion_educativa/", { headers }),
+        fetch("http://127.0.0.1:8000/api/clasificacion_caso/", { headers }).catch(() => null)
       ])
 
-      if (resCasos.ok) {
+      if (resCasos?.ok) {
         const dataCasos = await resCasos.json()
         setCasos(dataCasos.results || (Array.isArray(dataCasos) ? dataCasos : []))
       } else {
         toast.error("Error al obtener los casos del servidor.")
       }
 
-      if (resEstados.ok) {
+      if (resEstados?.ok) {
         const dataEstados = await resEstados.json()
         setEstados(dataEstados.results || (Array.isArray(dataEstados) ? dataEstados : []))
+      }
+
+      if (resIE?.ok) {
+        const dataIE = await resIE.json()
+        setInstituciones(dataIE.results || (Array.isArray(dataIE) ? dataIE : []))
+      }
+
+      if (resClasif?.ok) {
+        const dataClasif = await resClasif.json()
+        setClasificaciones(dataClasif.results || (Array.isArray(dataClasif) ? dataClasif : []))
       }
 
     } catch (error) {
@@ -134,6 +153,20 @@ export default function CasosSACPage() {
     return estadoObj ? (estadoObj.nombre || estadoObj.estado_sac || estadoObj.nom_estado_sac) : "DESCONOCIDO";
   }
 
+  const obtenerNombreClasificacion = (clasifId: any) => {
+    if (!clasifId) return "Sin clasificar";
+    const clasifObj = clasificaciones.find(c => c.id?.toString() === clasifId.toString());
+    return clasifObj ? (clasifObj.descripcion || "Sin clasificar") : `Tipo ${clasifId}`;
+  }
+
+  const getEstiloClasificacion = (texto: string) => {
+    const txt = texto.toUpperCase();
+    if (txt.includes("TIPO 1")) return "bg-green-50 text-green-700 border-green-200";
+    if (txt.includes("TIPO 2")) return "bg-orange-50 text-orange-600 border-orange-200";
+    if (txt.includes("TIPO 3")) return "bg-red-50 text-red-600 border-red-200";
+    return "bg-slate-50 text-slate-700 border-slate-200";
+  }
+
   const usuariosRegistradores = Array.from(
     new Set(
       casos.map(c => c.nombre_lider).filter(Boolean)
@@ -158,13 +191,14 @@ export default function CasosSACPage() {
     const ciudadanoLower = (c.ciudadano || "").toLowerCase()
     const estudianteLower = (c.estudiante || "").toLowerCase()
     const radicadoLower = (c.num_radicado_sac || "").toLowerCase()
-    
     const coincideBusqueda = radicadoLower.includes(termLower) || ciudadanoLower.includes(termLower) || estudianteLower.includes(termLower)
     const coincideEstado = filtroEstado === "todos" ? true : c.estado_sac?.toString() === filtroEstado
     const nombreRegistrador = c.nombre_lider || "Desconocido"
     const coincideUsuario = filtroUsuario === "todos" ? true : nombreRegistrador === filtroUsuario
+    const coincideIE = filtroIE === "todas" ? true : c.institucion_educativa?.toString() === filtroIE
+    const coincideRespondido = filtroRespondido === "todos" ? true : (filtroRespondido === "si" ? c.respondido === true : c.respondido === false)
 
-    return coincideBusqueda && coincideEstado && coincideUsuario
+    return coincideBusqueda && coincideEstado && coincideUsuario && coincideIE && coincideRespondido
   })
 
   const casosOrdenados = [...casosFiltrados].sort((a, b) => {
@@ -182,9 +216,6 @@ export default function CasosSACPage() {
     } else if (sortConfig.key === 'fecha') {
       valorA = a.fecha_radicacion || '';
       valorB = b.fecha_radicacion || '';
-    } else if (sortConfig.key === 'registrador') {
-      valorA = (a.nombre_lider || '').toLowerCase();
-      valorB = (b.nombre_lider || '').toLowerCase();
     }
 
     if (valorA < valorB) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -247,8 +278,10 @@ export default function CasosSACPage() {
       </div>
 
       <Card className="w-full border-slate-200 shadow-sm">
-        <CardContent className="p-4 sm:p-6 flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
+        <CardContent className="p-4 sm:p-6 flex flex-col gap-3">
+          
+          {/* Fila 1: Búsqueda principal */}
+          <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <Input 
               placeholder="Buscar por radicado, ciudadano o estudiante..." 
@@ -261,54 +294,85 @@ export default function CasosSACPage() {
             />
           </div>
           
-          <select 
-            value={filtroUsuario}
-            onChange={(e) => {
-              setFiltroUsuario(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700"
-          >
-            <option value="todos">Todos los usuarios</option>
-            {usuariosRegistradores.map((usr: any, index) => (
-              <option key={index} value={usr}>
-                {formatearTexto(usr)}
-              </option>
-            ))}
-          </select>
-          
-          <select 
-            value={filtroEstado}
-            onChange={(e) => {
-              setFiltroEstado(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700"
-          >
-            <option value="todos">Todos los estados</option>
-            {estados.map((est) => {
-              const nombre = est.nombre || est.estado_sac || est.nom_estado_sac;
-              return (
-                <option key={est.id} value={est.id.toString()}>
-                  {formatearTexto(nombre)}
-                </option>
-              )
-            })}
-          </select>
+          {/* Fila 2: Filtros */}
+          <div className="flex flex-col md:flex-row gap-3 w-full">
+            
+            <div className="w-full sm:w-[300px]"> 
+              <InstitucionCombobox 
+                opciones={[{ id: "todas", nombre: "Todas las I.E." }, ...instituciones]} 
+                value={filtroInstitucion} 
+                onChange={(val) => { 
+                  setFiltroInstitucion(val); 
+                  setCurrentPage(1); 
+                }}
+                placeholder="Buscar Institución Educativa..."
+              />
+            </div>
 
-          <Button 
-            variant="outline" 
-            onClick={() => { 
-              setSearchTerm(""); 
-              setFiltroEstado("todos"); 
-              setFiltroUsuario("todos"); 
-              setSortConfig(null); 
-              setCurrentPage(1); 
-            }}
-            className="h-10 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
-          >
-            <X className="h-4 w-4 mr-2" /> Limpiar
-          </Button>
+            <select 
+              value={filtroUsuario}
+              onChange={(e) => {
+                setFiltroUsuario(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 md:w-1/4"
+            >
+              <option value="todos">Todos los usuarios</option>
+              {usuariosRegistradores.map((usr: any, index) => (
+                <option key={index} value={usr}>
+                  {formatearTexto(usr)}
+                </option>
+              ))}
+            </select>
+            
+            <select 
+              value={filtroEstado}
+              onChange={(e) => {
+                setFiltroEstado(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 md:w-1/4"
+            >
+              <option value="todos">Todos los estados</option>
+              {estados.map((est) => {
+                const nombre = est.nombre || est.estado_sac || est.nom_estado_sac;
+                return (
+                  <option key={est.id} value={est.id.toString()}>
+                    {formatearTexto(nombre)}
+                  </option>
+                )
+              })}
+            </select>
+
+            <select 
+              value={filtroRespondido}
+              onChange={(e) => {
+                setFiltroRespondido(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-10 px-3 border border-slate-200 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 md:w-1/4"
+            >
+              <option value="todos">Respuesta: Todos</option>
+              <option value="si">Respondidos (Sí)</option>
+              <option value="no">Sin Respuesta (No)</option>
+            </select>
+
+            <Button 
+              variant="outline" 
+              onClick={() => { 
+                setSearchTerm(""); 
+                setFiltroEstado("todos"); 
+                setFiltroUsuario("todos"); 
+                setFiltroIE("todas");
+                setFiltroRespondido("todos");
+                setSortConfig(null); 
+                setCurrentPage(1); 
+              }}
+              className="h-10 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors md:w-auto whitespace-nowrap"
+            >
+              <X className="h-4 w-4 mr-2" /> Limpiar
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -322,7 +386,7 @@ export default function CasosSACPage() {
 
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[1000px] text-sm text-left">
+            <table className="w-full min-w-[1200px] text-sm text-left">
               <thead className="bg-slate-50 text-slate-700 font-medium border-b">
                 <tr>
                   <th 
@@ -330,7 +394,7 @@ export default function CasosSACPage() {
                     onClick={() => requestSort('radicado')}
                   >
                     <div className="flex items-center justify-center gap-2">
-                      Número de Radicado SAC
+                      Número de Radicado
                       {sortConfig?.key === 'radicado' ? (
                         sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 text-blue-600" /> : <ArrowDown className="h-4 w-4 text-blue-600" />
                       ) : <ArrowUpDown className="h-4 w-4 text-slate-400" />}
@@ -348,6 +412,7 @@ export default function CasosSACPage() {
                     </div>
                   </th>
                   <th className="px-6 py-4 text-center">Estudiante</th>
+                  <th className="px-6 py-4 text-center">Clasificación</th>
                   <th 
                     className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 transition-colors select-none"
                     onClick={() => requestSort('fecha')}
@@ -360,27 +425,18 @@ export default function CasosSACPage() {
                     </div>
                   </th>
                   <th className="px-6 py-4 text-center">Estado</th>
-                  <th 
-                    className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 transition-colors select-none"
-                    onClick={() => requestSort('registrador')}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      Registrado por
-                      {sortConfig?.key === 'registrador' ? (
-                        sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 text-blue-600" /> : <ArrowDown className="h-4 w-4 text-blue-600" />
-                      ) : <ArrowUpDown className="h-4 w-4 text-slate-400" />}
-                    </div>
-                  </th>
+                  <th className="px-6 py-4 text-center">Respondido</th>
+                  <th className="px-6 py-4 text-center">Registrado por</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
                 </tr>
               </thead>
               
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td colSpan={7} className="text-center py-8 text-slate-500">Cargando registros...</td></tr>
+                  <tr><td colSpan={9} className="text-center py-8 text-slate-500">Cargando registros...</td></tr>
                 ) : paginatedCasos.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-16">
+                    <td colSpan={9} className="text-center py-16">
                       <div className="flex flex-col items-center justify-center text-slate-500">
                         <AlertTriangle className="h-12 w-12 text-slate-300 mb-4" />
                         <p className="text-lg font-medium text-slate-700">No hay casos</p>
@@ -398,13 +454,20 @@ export default function CasosSACPage() {
                   paginatedCasos.map((caso) => {
                     const textoEstado = obtenerNombreEstado(caso.estado_sac);
                     const esTerminado = caso.respondido || textoEstado.toUpperCase().includes("TERMINADO") || textoEstado.toUpperCase().includes("CERRADO");
-                    const nombreRegistrador = caso.nombre_lider || caso.usuario_registro_username || "N/A"
+                    const nombreRegistrador = caso.nombre_lider || caso.usuario_registro_username || "N/A";
+                    const nombreClasificacion = obtenerNombreClasificacion(caso.clasificacion);
+                    const estiloBadgeClasificacion = getEstiloClasificacion(nombreClasificacion);
 
                     return (
                       <tr key={caso.id} className="bg-white hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 font-semibold text-slate-900 text-center">{caso.num_radicado_sac}</td>
                         <td className="px-6 py-4 text-center text-slate-700 font-medium">{caso.ciudadano}</td>
                         <td className="px-6 py-4 text-center text-slate-600">{caso.estudiante || "N/A"}</td>
+                        <td className="px-6 py-4 text-center">
+                          <Badge variant="outline" className={`${estiloBadgeClasificacion} font-medium`}>
+                            {formatearTexto(nombreClasificacion)}
+                          </Badge>
+                        </td>
                         <td className="px-6 py-4 text-center text-slate-600">{caso.fecha_radicacion}</td>
                         <td className="px-6 py-4 text-center">
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -414,6 +477,16 @@ export default function CasosSACPage() {
                           }`}>
                             {formatearTexto(textoEstado)}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <Badge 
+                            variant="outline" 
+                            className={caso.respondido 
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 font-medium" 
+                              : "bg-red-50 text-red-700 border-red-200 font-medium"}
+                          >
+                            {caso.respondido ? "Sí" : "No"}
+                          </Badge>
                         </td>
                         <td className="px-6 py-4 text-center text-slate-600 font-medium">{nombreRegistrador}</td>
                         <td className="px-6 py-4 text-center">
