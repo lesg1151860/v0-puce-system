@@ -25,23 +25,98 @@ const getAuthToken = () => {
   return cookieToken || localStorage.getItem("access_token")
 }
 
-const calcularDiasHabilesTranscurridos = (fechaStr: string) => {
-  if (!fechaStr) return 0
-  const fechaInicio = new Date(fechaStr)
-  const fechaFin = new Date()
-  if (isNaN(fechaInicio.getTime())) return 0
+const getFestivos = (year: number) => {
+  const festivos: Date[] = [];
 
-  let diasHabiles = 0
-  const copiaFecha = new Date(fechaInicio.getTime())
+  // Calcular Pascua (Algoritmo de Butcher)
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  const pascua = new Date(year, month - 1, day);
+
+  // Ley Emiliani
+  const addDays = (date: Date, days: number) => new Date(date.getTime() + days * 86400000);
+  const toMonday = (date: Date) => {
+    const day = date.getDay(); // 0 es domingo
+    const diff = (day === 0) ? 1 : (8 - day);
+    return addDays(date, diff);
+  };
+
+  // Festivos Fijos
+  festivos.push(new Date(year, 0, 1));   // 1 Ene
+  festivos.push(new Date(year, 4, 1));   // 1 May
+  festivos.push(new Date(year, 6, 20));  // 20 Jul
+  festivos.push(new Date(year, 7, 7));   // 7 Ago
+  festivos.push(new Date(year, 11, 8));  // 8 Dic
+  festivos.push(new Date(year, 11, 25)); // 25 Dic
+
+  // Festivos Ley Emiliani (Se mueven al lunes)
+  festivos.push(toMonday(new Date(year, 0, 6)));    // Reyes
+  festivos.push(toMonday(new Date(year, 2, 19)));   // San José
+  festivos.push(toMonday(new Date(year, 5, 29)));   // San Pedro y San Pablo
+  festivos.push(toMonday(new Date(year, 7, 15)));   // Asunción
+  festivos.push(toMonday(new Date(year, 9, 12)));   // Día de la Raza
+  festivos.push(toMonday(new Date(year, 10, 1)));   // Todos los Santos
+  festivos.push(toMonday(new Date(year, 10, 11)));  // Independencia Cartagena
+
+  // Festivos basados en Pascua
+  festivos.push(addDays(pascua, -3)); // Jueves Santo
+  festivos.push(addDays(pascua, -2)); // Viernes Santo
+  festivos.push(toMonday(addDays(pascua, 40))); // Ascensión
+  festivos.push(toMonday(addDays(pascua, 60))); // Corpus Christi
+  festivos.push(toMonday(addDays(pascua, 68))); // Sagrado Corazón
+
+  return festivos;
+};
+
+const esFestivo = (fecha: Date) => {
+  const festivosDelAnio = getFestivos(fecha.getFullYear());
+  return festivosDelAnio.some(f => 
+    f.getDate() === fecha.getDate() && 
+    f.getMonth() === fecha.getMonth() && 
+    f.getFullYear() === fecha.getFullYear()
+  );
+};
+
+const calcularDiasHabilesTranscurridos = (fechaStr: string) => {
+  if (!fechaStr) return 0;
+  
+  const soloFecha = fechaStr.split('T')[0];
+  const partes = soloFecha.split('-');
+  if (partes.length !== 3) return 0;
+  
+  const fechaInicio = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+  const fechaFin = new Date(); 
+  
+  fechaInicio.setHours(0, 0, 0, 0);
+  fechaFin.setHours(0, 0, 0, 0);
+
+  let diasHabiles = 0;
+  const copiaFecha = new Date(fechaInicio.getTime());
+  
+  copiaFecha.setDate(copiaFecha.getDate() + 1);
 
   while (copiaFecha <= fechaFin) {
-    const diaSemana = copiaFecha.getDay()
-    if (diaSemana !== 0 && diaSemana !== 6) { 
-      diasHabiles++
+    const diaSemana = copiaFecha.getDay();
+    const esFinDeSemana = (diaSemana === 0 || diaSemana === 6);
+    
+    if (!esFinDeSemana && !esFestivo(copiaFecha)) {
+      diasHabiles++;
     }
-    copiaFecha.setDate(copiaFecha.getDate() + 1)
+    copiaFecha.setDate(copiaFecha.getDate() + 1);
   }
-  return diasHabiles > 0 ? diasHabiles - 1 : 0
+  return diasHabiles;
 }
 
 export default function DashboardPage() {
@@ -104,8 +179,7 @@ export default function DashboardPage() {
         const listaSIUCE = extractData(resSIUCE);
         const catIE = extractData(resCatIE);
         const catSEM = extractData(resCatSEM);
-        const estadosSAC = extractData(resEstadosSAC); 
-
+        const estadosSAC = extractData(resEstadosSAC);
         const objTerminado = estadosSAC.find((e:any) => {
           const val = (e.estado_sac || e.nombre || "").toString().toUpperCase();
           return val.includes("TERMINADO") || val.includes("RESUELTO");
@@ -130,18 +204,15 @@ export default function DashboardPage() {
           return id !== undefined && id !== null && id.toString() === idSeguimientoStr;
         }).length;
         const sinRespuestaSAC = Math.max(0, totalSAC - resueltosSAC - seguimientoSAC);
-
         const totalSIUCE = listaSIUCE.length;
         const resueltosSIUCE = listaSIUCE.filter((c: any) => {
           const estado = (c.estado_siuce || c.estado || "").toString().toUpperCase();
           return estado.includes("TERMINADO") || c.avance_general === 100;
         }).length;
-
         const pendientesSIUCE = listaSIUCE.filter((c: any) => {
           const estado = (c.estado_siuce || c.estado || "").toString().toUpperCase();
           return estado.includes("PENDIENTE") || c.avance_general === 0;
         }).length;
-
         const seguimientoSIUCE = Math.max(0, totalSIUCE - resueltosSIUCE - pendientesSIUCE);
         const sinRespuestaSIUCE = pendientesSIUCE;
 
@@ -150,18 +221,8 @@ export default function DashboardPage() {
           casosEnSeguimiento: seguimientoSAC + seguimientoSIUCE,
           casosResueltos: resueltosSAC + resueltosSIUCE, 
           casosSinRespuesta: sinRespuestaSAC + sinRespuestaSIUCE,
-          sac: { 
-            total: totalSAC, 
-            seguimiento: seguimientoSAC, 
-            resueltos: resueltosSAC, 
-            sinRespuesta: sinRespuestaSAC 
-          },
-          siuce: { 
-            total: totalSIUCE, 
-            seguimiento: seguimientoSIUCE, 
-            resueltos: resueltosSIUCE, 
-            sinRespuesta: sinRespuestaSIUCE 
-          }
+          sac: { total: totalSAC, seguimiento: seguimientoSAC, resueltos: resueltosSAC, sinRespuesta: sinRespuestaSAC },
+          siuce: { total: totalSIUCE, seguimiento: seguimientoSIUCE, resueltos: resueltosSIUCE, sinRespuesta: sinRespuestaSIUCE }
         });
 
         const alertasSAC = listaSAC
@@ -184,18 +245,27 @@ export default function DashboardPage() {
 
         const alertasSIUCE = listaSIUCE
           .filter((c: any) => {
-            const avance = c.avance_general || 0;
-            return avance < 30;
+            const estadoObj = c.estado_siuce;
+            const estadoStr = (typeof estadoObj === 'object' ? (estadoObj?.estado_siuce || estadoObj?.nombre) : estadoObj) || c.estado || "";
+            const estaTerminado = estadoStr.toString().toUpperCase().includes("TERMINADO") || estadoStr.toString().toUpperCase().includes("RESUELTO") || Number(c.avance_general) === 100;
+            const fechaBase = c.fecha_registro || c.fecha_ocurrencia || c.created_at;
+            const diasHabiles = calcularDiasHabilesTranscurridos(fechaBase);
+
+            return !estaTerminado && diasHabiles >= 13;
           })
-          .map((c: any) => ({
-            id: c.id,
-            radicado: c.num_radicado_siuce || `SIUCE-${c.id}`,
-            nombre: c.estudiante_victima || "No registrado",
-            motivo: `Avance crítico (${c.avance_general || 0}%)`,
-            sistema: 'SIUCE',
-            badgeStyle: "bg-amber-100 text-amber-800 border-amber-200",
-            link: `/lider/siuce/editar/${c.id}`
-          }));
+          .map((c: any) => {
+            const fechaBase = c.fecha_registro;
+            const dias = calcularDiasHabilesTranscurridos(fechaBase);
+            return {
+              id: c.id,
+              radicado: c.num_radicado_siuce || c.num_radicado || c.radicado || `SIUCE-${c.id}`,
+              nombre: c.estudiante_victima || c.victima || "No registrado",
+              motivo: `Próximo a vencer (${dias}/15 días hábiles)`,
+              sistema: 'SIUCE',
+              badgeStyle: "bg-orange-100 text-orange-800 border-orange-200",
+              link: `/lider/siuce/editar/${c.id}`
+            };
+          });
 
         setAlertasCriticas([...alertasSAC, ...alertasSIUCE]);
 
@@ -232,7 +302,7 @@ export default function DashboardPage() {
             Alertas Críticas de Convivencia ({alertasCriticas.length})
           </h2>
           <p className="text-sm mt-1 text-slate-600">
-            Casos SAC próximos al vencimiento legal (15 días hábiles) y Casos SIUCE con avance inferior al 30%.
+            Casos SAC y SIUCE próximos a su vencimiento legal por estar inactivos durante 15 días hábiles.
           </p>
         </div>
 
