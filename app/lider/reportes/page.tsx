@@ -1,34 +1,57 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { FileSpreadsheet, Download, Calendar, FileText } from "lucide-react"
 import * as XLSX from "xlsx"
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { getCasesSACByDateRange, getCasesSIUCEByDateRange } from "@/lib/storage"
+import { Input } from "@/components/ui/input"
+import { api } from "@/lib/api" 
 
 const meses = [
-  { value: "0", label: "Enero" },
-  { value: "1", label: "Febrero" },
-  { value: "2", label: "Marzo" },
-  { value: "3", label: "Abril" },
-  { value: "4", label: "Mayo" },
-  { value: "5", label: "Junio" },
-  { value: "6", label: "Julio" },
-  { value: "7", label: "Agosto" },
-  { value: "8", label: "Septiembre" },
-  { value: "9", label: "Octubre" },
-  { value: "10", label: "Noviembre" },
-  { value: "11", label: "Diciembre" },
+  { value: "0", label: "Enero" }, { value: "1", label: "Febrero" }, { value: "2", label: "Marzo" },
+  { value: "3", label: "Abril" }, { value: "4", label: "Mayo" }, { value: "5", label: "Junio" },
+  { value: "6", label: "Julio" }, { value: "7", label: "Agosto" }, { value: "8", label: "Septiembre" },
+  { value: "9", label: "Octubre" }, { value: "10", label: "Noviembre" }, { value: "11", label: "Diciembre" },
 ]
 
-// Generar años desde 2020 hasta el año actual + 1
 const currentYear = new Date().getFullYear()
 const years = Array.from({ length: currentYear - 2020 + 2 }, (_, i) => 2020 + i)
+
+
+const fetchAndExtract = async (apiCall: () => Promise<any>) => {
+  try {
+    const res = await apiCall();
+    return res?.results || (Array.isArray(res) ? res : []);
+  } catch (error) {
+    return [];
+  }
+};
+
+const getNombre = (val: any, catalogo: any[], llavesPosibles: string[]) => {
+  if (val === undefined || val === null) return "";
+  
+
+  const id = typeof val === 'object' ? val.id : val;  
+  const item = catalogo.find((c: any) => c.id?.toString() === id?.toString());
+  
+  if (!item) {
+    
+    if (typeof val === 'object') {
+      for (const k of llavesPosibles) if (val[k]) return val[k];
+      return val.nombre || "";
+    }
+    return id?.toString(); 
+  }
+  
+  for (const k of llavesPosibles) {
+    if (item[k]) return item[k];
+  }
+  return item.nombre || item.descripcion || id?.toString();
+};
 
 export default function ReportesPage() {
   const [tipoReporte, setTipoReporte] = useState<"anual" | "mensual">("anual")
@@ -36,134 +59,175 @@ export default function ReportesPage() {
   const [month, setMonth] = useState<string | undefined>(undefined)
   const [isGenerating, setIsGenerating] = useState(false)
   const [message, setMessage] = useState("")
+  const [instituciones, setInstituciones] = useState<any[]>([])
+  const [agresiones, setAgresiones] = useState<any[]>([])
+  const [filtroIE, setFiltroIE] = useState<string>("todas")
+  const [filtroIETexto, setFiltroIETexto] = useState<string>("")
+  const [filtroAgresion, setFiltroAgresion] = useState<string>("todas")
 
-  const generarReporte = () => {
+  
+  useEffect(() => {
+    const initCatalogos = async () => {
+      setInstituciones(await fetchAndExtract(api.obtenerInstituciones));
+      setAgresiones(await fetchAndExtract(api.getTiposAgresion));
+    }
+    initCatalogos()
+  }, [])
+
+  const generarReporte = async () => {
     setIsGenerating(true)
-    setMessage("")
+    setMessage("Descargando catálogos y cruzando información...")
 
     try {
       const selectedYear = parseInt(year)
       const selectedMonth = tipoReporte === "mensual" && month ? parseInt(month) : undefined
 
-      // Obtener casos filtrados por fecha
-      const casosSAC = getCasesSACByDateRange(selectedYear, selectedMonth)
-      const casosSIUCE = getCasesSIUCEByDateRange(selectedYear, selectedMonth)
+      const [
+        rawCasosSAC, rawCasosSIUCE, catEstadosSAC, catRolesCiudadano, 
+        catEstadosSIUCE, catTiposIdentificacion, catGrados, catTiposDano, 
+        catEventos, catRolesAgresor, catClasificacion, catLugares, 
+        catAccionesIE, catAccionesSEM
+      ] = await Promise.all([
+        fetchAndExtract(api.getCasosSAC),
+        fetchAndExtract(api.getCasosSIUCE),
+        fetchAndExtract(api.getEstadosSAC),
+        fetchAndExtract(api.getRolesCiudadano),
+        fetchAndExtract(api.getEstadosSIUCE),
+        fetchAndExtract(api.getTiposIdentificacion),
+        fetchAndExtract(api.getGradosEscolaridad),
+        fetchAndExtract(api.getTiposDano),
+        fetchAndExtract(api.getEventosGeneradores),
+        fetchAndExtract(api.getRolesAgresor),
+        fetchAndExtract(api.getClasificaciones),
+        fetchAndExtract(api.getLugaresHechos),
+        fetchAndExtract(api.getAccionesIE),
+        fetchAndExtract(api.getAccionesSEM),
+      ]);
+
+      let casosSAC = rawCasosSAC.filter((c: any) => {
+        const fStr = c.fecha_radicacion || c.created_at; 
+        if (!fStr) return false;
+        const [y, m] = fStr.split('-');
+        if (tipoReporte === "anual") return parseInt(y) === selectedYear;
+        return parseInt(y) === selectedYear && parseInt(m) - 1 === selectedMonth;
+      });
+
+      let casosSIUCE = rawCasosSIUCE.filter((c: any) => {
+        const fStr = c.fecha_registro || c.fecha_ocurrencia || c.created_at; 
+        if (!fStr) return false;
+        const [y, m] = fStr.split('-');
+        if (tipoReporte === "anual") return parseInt(y) === selectedYear;
+        return parseInt(y) === selectedYear && parseInt(m) - 1 === selectedMonth;
+      });
+
+      const getID = (val: any) => typeof val === 'object' && val !== null ? val.id?.toString() : val?.toString();
+
+      if (filtroIE !== "todas") {
+        casosSAC = casosSAC.filter((c: any) => getID(c.institucion_educativa || c.ie) === filtroIE);
+        casosSIUCE = casosSIUCE.filter((c: any) => getID(c.institucion_educativa || c.ie) === filtroIE);
+      }
+
+      if (filtroAgresion !== "todas") {
+        casosSAC = []; 
+        casosSIUCE = casosSIUCE.filter((c: any) => getID(c.tipo_agresion) === filtroAgresion);
+      }
 
       if (casosSAC.length === 0 && casosSIUCE.length === 0) {
-        setMessage("No se encontraron casos para el período seleccionado.")
+        setMessage("No se encontraron casos para el período y filtros seleccionados.")
         setIsGenerating(false)
         return
       }
-
-      // Crear workbook
+      
       const workbook = XLSX.utils.book_new()
 
-      // Hoja SAC - Orden segun documentacion estructurada
-      const sacData = casosSAC.map((caso) => ({
-        "Radicado": caso.radicado,
-        "Fecha de Radicacion": caso.fechaRadicacion,
-        "Estado": caso.estado,
+      const sacData = casosSAC.map((caso: any) => ({
+        "Radicado": caso.num_radicado_sac ||"N/A",
+        "Fecha de Radicacion": caso.fecha_radicacion || "N/A",
+        "Estado": getNombre(caso.estado_sac, catEstadosSAC, ['estado_sac', 'nom_estado_sac']),
         "Respondido": caso.respondido ? "SI" : "NO",
-        "Radicado Respuesta": caso.radicadoRespuesta || "",
-        "Ciudadano": caso.ciudadano,
-        "Rol": caso.rol,
-        "Estudiante": caso.estudiante || "",
-        "Institucion contra quien se dirige": caso.institucionContraQuienSeDirige || "",
-        "Situacion": caso.situacion || "",
-        "Descripción": caso.descripcion || "",
+        "Radicado Respuesta": caso.radicado_respuesta || "N/A",
+        "Ciudadano": caso.ciudadano || "N/A",
+        "Rol": getNombre(caso.rol_ciudadano || caso.rol, catRolesCiudadano, ['nombre_rol']),
+        "Estudiante": caso.estudiante || "N/A",
+        "Institucion contra quien se dirige": getNombre(caso.nombre, instituciones, ['nombre_ie']),
+        "Situacion": caso.situacion || "N/A",
+        "Descripción": caso.descripcion || "N/A",
         "Prorroga": caso.prorroga ? "SI" : "NO",
-        "Fecha Nueva Prorroga": caso.fechaNuevaProrroga || "",
-        "Radicado Prorroga": caso.radicadoProrroga || "",
-        "Contestacion I.E.": caso.contestacionIE ? "SI" : "NO",
-        "Radicado Contestacion": caso.radicadoContestacion || "",
-        "Traslado a I.E.": caso.trasladoIE ? "SI" : "NO",
-        "Radicado Externa": caso.radicadoExterna || "",
-        "SAC Respuesta": caso.sacRespuesta || "",
+        "Fecha Nueva Prorroga": caso.fecha_nueva_prorroga || "N/A",
+        "Radicado Prorroga": caso.radicado_prorroga || "N/A",
+        "Contestacion I.E.": caso.contestacion_ie ? "SI" : "NO",
+        "Radicado Contestacion": caso.radicado_contestacion || "N/A",
+        "Traslado a I.E.": caso.traslado_ie ? "SI" : "NO",
+        "Radicado Externa": caso.radicado_externa || "N/A",
+        "SAC Respuesta": caso.sac_respuesta || "N/A",
       }))
 
       if (sacData.length > 0) {
         const sacSheet = XLSX.utils.json_to_sheet(sacData)
-        // Ajustar ancho de columnas - Orden segun documentacion
-        sacSheet["!cols"] = [
-          { wch: 18 }, // Radicado
-          { wch: 25 }, // Ciudadano
-          { wch: 18 }, // Fecha de Radicacion
-          { wch: 18 }, // Radicado Respuesta
-          { wch: 15 }, // Rol
-          { wch: 14 }, // Traslado a I.E.
-          { wch: 18 }, // Radicado Externa
-          { wch: 12 }, // Respondido
-          { wch: 10 }, // Prorroga
-          { wch: 18 }, // Fecha Nueva Prorroga
-          { wch: 18 }, // Radicado Prorroga
-          { wch: 15 }, // Contestacion I.E.
-          { wch: 20 }, // Radicado Contestacion
-          { wch: 25 }, // Estudiante
-          { wch: 30 }, // Institucion contra quien se dirige
-          { wch: 12 }, // Situacion
-          { wch: 14 }, // SAC Respuesta
-          { wch: 15 }, // Estado
-        ]
+        sacSheet["!cols"] = Array(19).fill({ wch: 20 })
         XLSX.utils.book_append_sheet(workbook, sacSheet, "SAC")
       }
 
-      // Hoja SIUCE - Orden segun documentacion estructurada
-      const siuceData = casosSIUCE.map((caso) => ({
-        "Radicado": caso.radicado,
-        "Avance General (%)": caso.avanceGeneral,
-        "Estado": caso.estado,
-        "I.E.": caso.ie,
-        "Victima": caso.victima,
-        "Tipo de Identificacion": caso.tipoIdentificacion,
-        "Numero (identificacion)": caso.numeroIdentificacion,
-        "Grado": caso.grado,
-        "Dano (Dano Principal)": caso.danoPrincipal,
-        "Dano 2 (Dano Secundario)": caso.danoSecundario || "",
-        "Dano 3 (Dano Terciario)": caso.danoTerciario || "",
-        "Tipo de Agresion": caso.tipoAgresion || "",
+      const siuceData = casosSIUCE.map((caso: any) => ({
+        "Radicado": caso.num_radicado_siuce || caso.num_radicado || caso.radicado || "N/A",
+        "Avance General (%)": caso.avance_general || 0,
+        "Estado": getNombre(caso.estado_siuce || caso.estado, catEstadosSIUCE, ['estado_siuce']),
+        "I.E.": getNombre(caso.nombre, instituciones, ['nombre_ie']),
+        "Victima": caso.estudiante_victima || caso.victima || "N/A",
+        "Tipo de Identificacion": getNombre(caso.tipo_identificacion, catTiposIdentificacion, ['tipo_identificacion']),
+        "Numero (identificacion)": caso.num_identificacion || "N/A",
+        "Grado": getNombre(caso.grado_escolaridad || caso.grado, catGrados, ['nom_grado']),
+        "Dano Principal": getNombre(caso.dano_principal, catTiposDano, ['tipo_dano']),
+        "Dano Secundario": getNombre(caso.dano_secundario, catTiposDano, ['tipo_dano']),
+        "Dano Terciario": getNombre(caso.dano_terciario, catTiposDano, ['tipo_dano']),
+        "Tipo de Agresion": getNombre(caso.tipo_agresion, agresiones, ['tipo_agresion']),
         "Repetitivo": caso.repetitivo ? "SI" : "NO",
-        "Evento Generador": caso.eventoGenerador,
-        "Otro (evento generador)": caso.otroEventoGenerador || "",
-        "Rol Agresor": caso.rolAgresor,
-        "Nombre Agresor": caso.nombreAgresor,
-        "Clasificacion": caso.clasificacion,
-        "Lugar": caso.lugar,
-        "Fecha Ocurrencia": caso.fechaOcurrencia,
-        "Fecha Registro": caso.fechaRegistro,
-        "Seguimiento I.E.": caso.seguimientoIE ? "SI" : "NO",
-        "Numero (seguimiento I.E.)": caso.numeroSeguimientoIE || 0,
-        "Seguimiento Policia": caso.seguimientoPolicia ? "SI" : "NO",
-        "Numero (seguimiento Policia)": caso.numeroSeguimientoPolicia || 0,
-        "CEC (Comite Escolar de Convivencia)": caso.cec ? "SI" : "NO",
-        "Acciones de I.E.": caso.accionesIE || "",
-        "Avance I.E. (%)": caso.avanceIE,
-        "Acciones de S.E.M.": caso.accionesSEM || "",
-        "Avance S.E.M. (%)": caso.avanceSEM,
-        "Descripcion Avance": caso.descripcionAvance || "",
-        "Entidades Externas (Radicado de Respuesta)": caso.entidadesExternas || "",
-        "Fecha Radicado E. Externas": caso.fechaRadicadoExternas || "",
+        "Evento Generador": getNombre(caso.evento_generador, catEventos, ['evento_generador']),
+        "Otro (evento generador)": caso.otro_evento_generador || "N/A",
+        "Rol Agresor": getNombre(caso.rol_agresor, catRolesAgresor, ['nom_rol_agresor']),
+        "Nombre Agresor": caso.nombre_agresor || "N/A",
+        "Clasificacion": getNombre(caso.clasificacion, catClasificacion, ['descripcion', 'clasificacion']),
+        "Lugar": getNombre(caso.lugar_hechos || caso.lugar, catLugares, ['nom_lugar']),
+        "Fecha Ocurrencia": caso.fecha_ocurrencia || "N/A",
+        "Fecha Registro": caso.fecha_registro || "N/A",
+        "Seguimiento I.E.": caso.seguimiento_ie ? "SI" : "NO",
+        "Numero (seguimiento I.E.)": caso.numero_seguimiento_ie || 0,
+        "Seguimiento Policia": caso.seguimiento_policia ? "SI" : "NO",
+        "Numero (seguimiento Policia)": caso.numero_seguimiento_policia || 0,
+        "CEC": caso.cec ? "SI" : "NO",
+        "Acciones de I.E.": getNombre(caso.acciones_ie, catAccionesIE, ['nom_accion_ie']),
+        "Avance I.E. (%)": caso.avance_ie || 0,
+        "Acciones de S.E.M.": getNombre(caso.acciones_sem, catAccionesSEM, ['nom_accion_sem']),
+        "Avance S.E.M. (%)": caso.avance_sem || 0,
+        "Descripcion Avance": caso.descripcion_avance || "N/A",
+        "Entidades Externas (Radicado de Respuesta)": caso.entidades_externas || "N/A",
+        "Fecha Radicado E. Externas": caso.fecha_radicado_externas || "N/A",
       }))
 
       if (siuceData.length > 0) {
         const siuceSheet = XLSX.utils.json_to_sheet(siuceData)
-        // Ajustar ancho de columnas
         siuceSheet["!cols"] = Array(33).fill({ wch: 18 })
         XLSX.utils.book_append_sheet(workbook, siuceSheet, "SIUCE")
       }
 
-      // Generar nombre del archivo
+      const instObj = instituciones.find(i => i.id?.toString() === filtroIE)
+      const ieName = instObj ? (instObj.nombre || instObj.nombre_ie) : ""
+      const agreObj = agresiones.find(a => a.id?.toString() === filtroAgresion)
+      const agresionName = agreObj ? (agreObj.nombre || agreObj.tipo || agreObj.tipo_agresion) : ""
+
       const mesNombre = selectedMonth !== undefined ? meses[selectedMonth].label : ""
-      const nombreArchivo = tipoReporte === "anual"
-        ? `Reporte_Convivencia_${selectedYear}.xlsx`
-        : `Reporte_Convivencia_${mesNombre}_${selectedYear}.xlsx`
+      let nombreArchivo = "Reporte_Convivencia"
+      
+      if (filtroIE !== "todas" && ieName) nombreArchivo += `_${ieName.replace(/[^a-zA-Z0-9]/g, "_")}`
+      if (filtroAgresion !== "todas" && agresionName) nombreArchivo += `_${agresionName.replace(/[^a-zA-Z0-9]/g, "_")}`
+      
+      nombreArchivo += tipoReporte === "anual" ? `_${selectedYear}.xlsx` : `_${mesNombre}_${selectedYear}.xlsx`
 
-      // Descargar archivo
       XLSX.writeFile(workbook, nombreArchivo)
-
-      setMessage(`Reporte generado exitosamente. SAC: ${casosSAC.length} casos, SIUCE: ${casosSIUCE.length} casos.`)
+      setMessage(`¡Reporte generado exitosamente! SAC: ${casosSAC.length} casos | SIUCE: ${casosSIUCE.length} casos.`)
     } catch (error) {
       console.error("Error generando reporte:", error)
-      setMessage("Error al generar el reporte. Por favor intente nuevamente.")
+      setMessage("Ocurrió un error extrayendo la información del servidor.")
     } finally {
       setIsGenerating(false)
     }
@@ -171,14 +235,12 @@ export default function ReportesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Reportes</h1>
-        <p className="text-slate-500">Genera reportes de casos en formato Excel</p>
+        <p className="text-slate-500">Genera reportes de casos exportando datos en tiempo real</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Configuración del reporte */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -186,82 +248,110 @@ export default function ReportesPage() {
               Configuración del Reporte
             </CardTitle>
             <CardDescription>
-              Selecciona el período para generar el reporte
+              Selecciona el período y filtros para consultar el sistema
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Tipo de reporte */}
             <div className="space-y-3">
               <Label>Tipo de Reporte</Label>
               <RadioGroup
                 value={tipoReporte}
                 onValueChange={(value) => {
                   setTipoReporte(value as "anual" | "mensual")
-                  if (value === "anual") {
-                    setMonth(undefined)
-                  }
+                  if (value === "anual") setMonth(undefined)
                 }}
                 className="flex gap-4"
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="anual" id="anual" />
-                  <Label htmlFor="anual" className="font-normal cursor-pointer">
-                    Anual
-                  </Label>
+                  <Label htmlFor="anual" className="font-normal cursor-pointer">Anual</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="mensual" id="mensual" />
-                  <Label htmlFor="mensual" className="font-normal cursor-pointer">
-                    Mensual
-                  </Label>
+                  <Label htmlFor="mensual" className="font-normal cursor-pointer">Mensual</Label>
                 </div>
               </RadioGroup>
             </div>
 
-            {/* Año */}
             <div className="space-y-2">
               <Label htmlFor="year">Año</Label>
               <Select value={year} onValueChange={setYear}>
-                <SelectTrigger id="year">
-                  <SelectValue placeholder="Selecciona el año" />
-                </SelectTrigger>
+                <SelectTrigger id="year"><SelectValue placeholder="Selecciona el año" /></SelectTrigger>
                 <SelectContent>
                   {years.map((y) => (
-                    <SelectItem key={y} value={y.toString()}>
-                      {y}
-                    </SelectItem>
+                    <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Mes (solo si es mensual) */}
             {tipoReporte === "mensual" && (
               <div className="space-y-2">
                 <Label htmlFor="month">Mes</Label>
                 <Select value={month} onValueChange={setMonth}>
-                  <SelectTrigger id="month">
-                    <SelectValue placeholder="Selecciona el mes" />
-                  </SelectTrigger>
+                  <SelectTrigger id="month"><SelectValue placeholder="Selecciona el mes" /></SelectTrigger>
                   <SelectContent>
                     {meses.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.label}
-                      </SelectItem>
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
 
-            {/* Botón generar */}
+            <div className="space-y-2 relative">
+              <Label htmlFor="ie_filter">Institución Educativa (I.E.)</Label>
+              <Input 
+                id="ie_filter"
+                list="instituciones-reporte-list"
+                placeholder="Escribe para buscar I.E..." 
+                className="h-10 w-full bg-white"
+                value={filtroIETexto}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFiltroIETexto(val);
+                  
+                  if (val.trim() === "") {
+                    setFiltroIE("todas");
+                    return;
+                  }
+                  
+                  const inst = instituciones.find(i => (i.nombre || i.nombre_ie) === val);
+                  if (inst) setFiltroIE(inst.id.toString());
+                  else setFiltroIE("no_match"); 
+                }}
+              />
+              <datalist id="instituciones-reporte-list">
+                {instituciones.map((inst) => (
+                  <option key={inst.id} value={inst.nombre || inst.nombre_ie} />
+                ))}
+              </datalist>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tipo_agresion">Tipo de Agresión</Label>
+              <Select value={filtroAgresion} onValueChange={setFiltroAgresion}>
+                <SelectTrigger id="tipo_agresion">
+                  <SelectValue placeholder="Todos los tipos de agresión" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todos los tipos de agresión</SelectItem>
+                  {agresiones.map((a) => (
+                    <SelectItem key={a.id} value={a.id.toString()}>
+                      {a.nombre || a.tipo || a.tipo_agresion}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <Button
               onClick={generarReporte}
               disabled={isGenerating || (tipoReporte === "mensual" && !month)}
               className="w-full"
             >
               {isGenerating ? (
-                <>Generando...</>
+                <>Obteniendo datos...</>
               ) : (
                 <>
                   <Download className="mr-2 h-4 w-4" />
@@ -270,16 +360,14 @@ export default function ReportesPage() {
               )}
             </Button>
 
-            {/* Mensaje */}
             {message && (
-              <p className={`text-sm ${message.includes("Error") || message.includes("No se encontraron") ? "text-red-600" : "text-green-600"}`}>
+              <p className={`text-sm font-medium ${message.includes("Error") || message.includes("No se encontraron") ? "text-red-600" : "text-green-600"}`}>
                 {message}
               </p>
             )}
           </CardContent>
         </Card>
 
-        {/* Información del reporte */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -287,7 +375,7 @@ export default function ReportesPage() {
               Información del Reporte
             </CardTitle>
             <CardDescription>
-              Detalles sobre el contenido del archivo Excel
+              Detalles sobre el contenido del archivo Excel exportado
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -297,9 +385,7 @@ export default function ReportesPage() {
                 <div>
                   <h4 className="font-medium text-blue-900">Hoja 1: SAC</h4>
                   <p className="text-sm text-blue-700">
-                    Contiene todos los casos del Sistema de Atención al Ciudadano registrados en el período seleccionado,
-                    incluyendo información del ciudadano, fechas, estado y seguimiento.
-                  </p>
+                    Contiene todos los casos del Sistema de Atención al Ciudadano con información detallada de cada registro</p>
                 </div>
               </div>
 
@@ -308,9 +394,7 @@ export default function ReportesPage() {
                 <div>
                   <h4 className="font-medium text-emerald-900">Hoja 2: SIUCE</h4>
                   <p className="text-sm text-emerald-700">
-                    Contiene todos los casos del Sistema de Información Unificado de Convivencia Escolar,
-                    incluyendo información de víctimas, agresores, clasificación, avances y seguimiento.
-                  </p>
+                    Contiene todos los casos del Sistena de Información Unificado de Convivencia Escolar con información detallada de cada registro</p>
                 </div>
               </div>
             </div>
@@ -318,11 +402,9 @@ export default function ReportesPage() {
             <div className="p-3 rounded-lg bg-slate-50 border">
               <h4 className="font-medium text-slate-900 mb-2">Notas:</h4>
               <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
-                <li>El reporte anual incluye todos los casos del año seleccionado</li>
-                <li>El reporte mensual filtra por mes y año específicos</li>
-                <li>Los casos SAC se filtran por fecha de radicación</li>
-                <li>Los casos SIUCE se filtran por fecha de registro</li>
-                <li>El archivo se descarga automáticamente al generar</li>
+                <li>El sistema descarga los catálogos en tiempo real para hacer el cruce de datos.</li>
+                <li>Si un registro queda vacío, significa que el dato no fue suministrado en la creación del caso.</li>
+                <li>El archivo se descarga automáticamente al generar.</li>
               </ul>
             </div>
           </CardContent>
