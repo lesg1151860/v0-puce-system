@@ -60,6 +60,13 @@ export default function EditarCasoSIUCEPage() {
   const [avanceGeneral, setAvanceGeneral] = useState(0)
   const [estadoCalculado, setEstadoCalculado] = useState<"PENDIENTE" | "EN SEGUIMIENTO" | "TERMINADO">("PENDIENTE")
 
+  const getClasificacionStyle = (nombre: string) => {
+  const n = nombre.toLowerCase();
+  if (n.includes("tipo 3")) return "bg-red-100 text-red-800 border-red-200";
+  if (n.includes("tipo 2")) return "bg-orange-100 text-orange-800 border-orange-200";
+  return "bg-yellow-100 text-yellow-800 border-yellow-200";
+  };
+
   const {
     register, handleSubmit, setValue, watch, reset, clearErrors, setError: setFieldError, formState: { errors },
   } = useForm<CasoSIUCEFormData>({
@@ -317,7 +324,6 @@ export default function EditarCasoSIUCEPage() {
 
       <form onSubmit={handleSubmit(onSubmit, (err) => console.log("ERRORES DE VALIDACIÓN ZOD:", err))} className="space-y-6">
         
-        {/* 💡 CORRECCIÓN 2: Exigirle explícitamente a los inputs ocultos que guarden todo como NUMBER, no como texto */}
         <input type="hidden" {...register("danoPrincipal")} />
         <input type="hidden" {...register("clasificacion")} />
         <input type="hidden" {...register("estado")} />
@@ -333,13 +339,13 @@ export default function EditarCasoSIUCEPage() {
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="radicado">Radicado *</Label>
+                <Label htmlFor="radicado">N° Radicado SIUCE<span className="text-red-500">*</span></Label>
                 <Input id="radicado" maxLength={10} {...register("radicado")} className={errors.radicado ? "border-red-500" : ""} />
                 {errors.radicado && <p className="text-sm text-red-500">{errors.radicado.message}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="ie">Institución Educativa *</Label>
+                <Label htmlFor="ie">Institución Educativa <span className="text-red-500">*</span></Label>
                 <InstitucionCombobox 
                     opciones={instituciones} 
                     value={watch("ie") || ""} 
@@ -350,9 +356,12 @@ export default function EditarCasoSIUCEPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="fechaRegistro">Fecha de Registro *</Label>
-                <Input id="fechaRegistro" type="date" {...register("fechaRegistro")} className={errors.fechaRegistro ? "border-red-500" : ""} disabled />
-                <p className="text-xs text-slate-500">Fecha de creación (Inmodificable)</p>
+                <Label htmlFor="fechaRegistro">Fecha de Registro <span className="text-red-500">*</span></Label>
+                <Input id="fechaRegistro" type="date"
+                  {...register("fechaRegistro")} className={errors.fechaRegistro ? "border-red-500" : ""} 
+                  disabled={isLoading}
+                />
+
               </div>
             </div>
           </CardContent>
@@ -364,23 +373,23 @@ export default function EditarCasoSIUCEPage() {
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label>Nombre de la Víctima *</Label>
+                <Label>Nombre de la Víctima <span className="text-red-500">*</span></Label>
                 <Input {...register("victima")} className="uppercase" />
                 {errors.victima && <p className="text-sm text-red-500">{errors.victima.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label>Tipo Identificación *</Label>
+                <Label>Tipo Identificación <span className="text-red-500">*</span></Label>
                 <Select value={watch("tipoIdentificacion")} onValueChange={(value) => setValue("tipoIdentificacion", value as any, { shouldValidate: true })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{tiposIdentificacion.map((tipo) => <SelectItem key={tipo.id?.toString()} value={tipo.id?.toString()}>{tipo.tipo_identificacion}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Número Identificación *</Label>
+                <Label>Número Identificación <span className="text-red-500">*</span></Label>
                 <Input maxLength={10} {...register("numeroIdentificacion")} />
               </div>
               <div className="space-y-2">
-                <Label>Grado *</Label>
+                <Label>Grado <span className="text-red-500">*</span></Label>
                 <Select value={watch("grado")} onValueChange={(value) => setValue("grado", value as any, { shouldValidate: true })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{grados.map((g) => <SelectItem key={g.id?.toString()} value={g.id?.toString()}>{g.nom_grado}</SelectItem>)}</SelectContent>
@@ -396,7 +405,7 @@ export default function EditarCasoSIUCEPage() {
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label>Tipo Agresión *</Label>
+                <Label>Tipo Agresión <span className="text-red-500">*</span></Label>
                 <Select value={watch("tipoAgresion")} onValueChange={(value) => setValue("tipoAgresion", value as any, { shouldValidate: true })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{tiposAgresion.map((tipo) => <SelectItem key={tipo.id?.toString()} value={tipo.id?.toString()}>{tipo.tipo_agresion}</SelectItem>)}</SelectContent>
@@ -431,7 +440,7 @@ export default function EditarCasoSIUCEPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Evento Generador *</Label>
+                <Label>Evento Generador <span className="text-red-500">*</span></Label>
                 <Select value={watch("eventoGenerador")} onValueChange={(value) => setValue("eventoGenerador", value as any, { shouldValidate: true })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{eventosGeneradores.map((evento) => <SelectItem key={evento.id?.toString()} value={evento.id?.toString()}>{evento.evento_generador}</SelectItem>)}</SelectContent>
@@ -450,7 +459,13 @@ export default function EditarCasoSIUCEPage() {
               <div className="space-y-2">
                 <Label>Clasificación (Automática)</Label>
                 <div className="flex items-center h-10 px-3 border bg-slate-50 rounded-md">
-                  <Badge variant="outline">{getClasificacionNombre(watch("clasificacion"))}</Badge>
+                  {(() => {
+                    const nombre = getClasificacionNombre(watch("clasificacion"));
+            
+                    return (
+                      <Badge variant="outline" className={getClasificacionStyle(nombre)}> {nombre} </Badge>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -463,25 +478,25 @@ export default function EditarCasoSIUCEPage() {
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label>Rol del Agresor *</Label>
+                <Label>Rol del Agresor <span className="text-red-500">*</span></Label>
                 <Select value={watch("rolAgresor")} onValueChange={(value) => setValue("rolAgresor", value as any, { shouldValidate: true })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{rolesAgresor.map((rol) => <SelectItem key={rol.id?.toString()} value={rol.id?.toString()}>{rol.nom_rol_agresor}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Nombre Agresor *</Label>
+                <Label>Nombre Agresor <span className="text-red-500">*</span></Label>
                 <Input {...register("nombreAgresor")} className="uppercase" />
               </div>
               <div className="space-y-2">
-                <Label>Lugar *</Label>
+                <Label>Lugar <span className="text-red-500">*</span></Label>
                 <Select value={watch("lugar")} onValueChange={(value) => setValue("lugar", value as any, { shouldValidate: true })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{lugares.map((l) => <SelectItem key={l.id?.toString()} value={l.id?.toString()}>{l.nom_lugar}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Fecha de Ocurrencia *</Label>
+                <Label>Fecha de Ocurrencia <span className="text-red-500">*</span></Label>
                 <Input type="date" {...register("fechaOcurrencia")} />
               </div>
             </div>
