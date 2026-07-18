@@ -19,7 +19,6 @@ import { Badge } from "@/components/ui/badge"
 import { casoSIUCESchema, type CasoSIUCEFormData } from "@/lib/validations"
 import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
 import { api } from "@/lib/api"
-// 💡 IMPORTACIÓN DEL NUEVO COMBOBOX
 import { InstitucionCombobox } from "@/components/InstitucionCombobox"
 
 
@@ -65,6 +64,14 @@ export default function NuevoCasoSIUCEPage() {
   const danoPrincipal = watch("danoPrincipal")
   const repetitivo = watch("repetitivo")
   const eventoGenerador = watch("eventoGenerador")
+
+
+  const getClasificacionStyle = (nombre: string) => {
+  const nombreLower = nombre.toLowerCase();
+  if (nombreLower.includes("tipo 3")) return "bg-red-100 text-red-800 border-red-200";
+  if (nombreLower.includes("tipo 2")) return "bg-orange-100 text-orange-800 border-orange-200";
+  return "bg-yellow-100 text-yellow-800 border-yellow-200";
+  };
 
   useEffect(() => {
     const inicializarCatalogos = async () => {
@@ -288,11 +295,11 @@ export default function NuevoCasoSIUCEPage() {
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="radicado">Radicado *</Label>
+                <Label htmlFor="radicado">N° Radicado SIUCE <span className="text-red-500">*</span></Label>
                 <Input 
                   id="radicado" 
-                  placeholder="Ej: 1234567890" 
-                  maxLength={10}
+                  placeholder="Ej: 30523" 
+                  maxLength={5}
                   {...register("radicado", { 
                     onChange: (e) => { 
                       e.target.value = e.target.value.replace(/\D/g, '');
@@ -306,7 +313,7 @@ export default function NuevoCasoSIUCEPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="ie">Institución Educativa *</Label>
+                <Label htmlFor="ie">Institución Educativa <span className="text-red-500">*</span></Label>
                 <InstitucionCombobox 
                   opciones={instituciones} 
                   value={watch("ie") || ""} 
@@ -317,7 +324,7 @@ export default function NuevoCasoSIUCEPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="fechaRegistro">Fecha de Registro *</Label>
+                <Label htmlFor="fechaRegistro">Fecha de Registro <span className="text-red-500">*</span></Label>
                 <Input id="fechaRegistro" type="date" {...register("fechaRegistro")} className={errors.fechaRegistro ? "border-red-500" : ""} />
               </div>
             </div>
@@ -330,13 +337,13 @@ export default function NuevoCasoSIUCEPage() {
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="victima">Nombre de la Víctima *</Label>
+                <Label htmlFor="victima">Nombre de la Víctima <span className="text-red-500">*</span></Label>
                 <Input id="victima" placeholder="Nombre completo" {...register("victima")} className={errors.victima ? "border-red-500 uppercase" : "uppercase"} />
                 {errors.victima && <p className="text-sm text-red-500">{errors.victima.message}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tipoIdentificacion">Tipo de Identificación *</Label>
+                <Label htmlFor="tipoIdentificacion">Tipo de Identificación <span className="text-red-500">*</span></Label>
                 <Select onValueChange={(value) => { setValue("tipoIdentificacion", value as any, { shouldValidate: true }); }}>
                   <SelectTrigger className={errors.tipoIdentificacion ? "border-red-500" : ""}>
                     <SelectValue placeholder="Selecciona tipo" />
@@ -351,7 +358,7 @@ export default function NuevoCasoSIUCEPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="numeroIdentificacion">Número de Identificación *</Label>
+                <Label htmlFor="numeroIdentificacion">Número de Identificación <span className="text-red-500">*</span></Label>
                 <Input 
                   id="numeroIdentificacion" 
                   placeholder="Ej: 1090123456" 
@@ -372,7 +379,7 @@ export default function NuevoCasoSIUCEPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="grado">Grado *</Label>
+                <Label htmlFor="grado">Grado <span className="text-red-500">*</span></Label>
                 <Select onValueChange={(value) => { setValue("grado", value as any, { shouldValidate: true }); }}>
                   <SelectTrigger className={errors.grado ? "border-red-500" : ""}>
                     <SelectValue placeholder="Selecciona el grado" />
@@ -395,7 +402,7 @@ export default function NuevoCasoSIUCEPage() {
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="tipoAgresion">Tipo de Agresión *</Label>
+                <Label htmlFor="tipoAgresion">Tipo de Agresión <span className="text-red-500">*</span></Label>
                 <Select onValueChange={(value) => { setValue("tipoAgresion", value as any, { shouldValidate: true }); }}>
                   <SelectTrigger className={errors.tipoAgresion ? "border-red-500" : ""}>
                     <SelectValue placeholder="Selecciona el tipo" />
@@ -411,7 +418,7 @@ export default function NuevoCasoSIUCEPage() {
 
               {/* DAÑO PRINCIPAL AUTOMÁTICO */}
               <div className="space-y-2">
-                <Label htmlFor="danoPrincipal">Daño Principal (Automático)</Label>
+                <Label htmlFor="danoPrincipal">Daño Principal <span className="text-red-500">*</span></Label>
                 <div className={`flex items-center h-10 px-3 rounded-md border ${errors.danoPrincipal ? 'border-red-500 bg-red-50 text-red-500' : 'bg-slate-50'}`}>
                   <span className="font-medium">
                     {getDanoNombre(watch("danoPrincipal"))}
@@ -449,7 +456,7 @@ export default function NuevoCasoSIUCEPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="eventoGenerador">Evento Generador *</Label>
+                <Label htmlFor="eventoGenerador">Evento Generador <span className="text-red-500">*</span></Label>
                 <Select onValueChange={(value) => { setValue("eventoGenerador", value as any, { shouldValidate: true }); }}>
                   <SelectTrigger className={errors.eventoGenerador ? "border-red-500" : ""}>
                     <SelectValue placeholder="Selecciona evento" />
@@ -479,9 +486,16 @@ export default function NuevoCasoSIUCEPage() {
               <div className="space-y-2">
                 <Label>Clasificación (Automática)</Label>
                 <div className="flex items-center h-10 px-3 rounded-md border bg-slate-50">
-                  <Badge variant="outline" className={watch("clasificacion") === "Tipo 3" ? "bg-red-100 text-red-800 border-red-200" : watch("clasificacion") === "Tipo 2" ? "bg-orange-100 text-orange-800 border-orange-200" : "bg-yellow-100 text-yellow-800 border-yellow-200"}>
-                    {getClasificacionNombre(watch("clasificacion"))}
-                  </Badge>
+                  {(() => {
+                    const nombre = getClasificacionNombre(watch("clasificacion"));
+                    const estilo = getClasificacionStyle(nombre);
+
+                    return (
+                      <Badge variant="outline" className={estilo}>
+                        {nombre}
+                      </Badge>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -494,7 +508,7 @@ export default function NuevoCasoSIUCEPage() {
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="rolAgresor">Rol del Agresor *</Label>
+                <Label htmlFor="rolAgresor">Rol del Agresor <span className="text-red-500">*</span></Label>
                 <Select onValueChange={(value) => { setValue("rolAgresor", value as any, { shouldValidate: true }); }}>
                   <SelectTrigger className={errors.rolAgresor ? "border-red-500" : ""}><SelectValue placeholder="Selecciona el rol" /></SelectTrigger>
                   <SelectContent>{rolesAgresor.map((rol) => (<SelectItem key={rol.id?.toString()} value={rol.id?.toString()}>{rol.nom_rol_agresor}</SelectItem>))}</SelectContent>
@@ -503,13 +517,13 @@ export default function NuevoCasoSIUCEPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nombreAgresor">Nombre del Agresor *</Label>
+                <Label htmlFor="nombreAgresor">Nombre del Agresor <span className="text-red-500">*</span></Label>
                 <Input id="nombreAgresor" placeholder="Nombre completo" {...register("nombreAgresor")} className={errors.nombreAgresor ? "border-red-500 uppercase" : "uppercase"} />
                 {errors.nombreAgresor && <p className="text-sm text-red-500">{errors.nombreAgresor.message}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="lugar">Lugar *</Label>
+                <Label htmlFor="lugar">Lugar <span className="text-red-500">*</span></Label>
                 <Select onValueChange={(value) => { setValue("lugar", value as any, { shouldValidate: true }); }}>
                   <SelectTrigger className={errors.lugar ? "border-red-500" : ""}><SelectValue placeholder="Selecciona el lugar" /></SelectTrigger>
                   <SelectContent>{lugares.map((l) => (<SelectItem key={l.id?.toString()} value={l.id?.toString()}>{l.nom_lugar}</SelectItem>))}</SelectContent>
@@ -518,7 +532,7 @@ export default function NuevoCasoSIUCEPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="fechaOcurrencia">Fecha de Ocurrencia *</Label>
+                <Label htmlFor="fechaOcurrencia">Fecha de Ocurrencia <span className="text-red-500">*</span></Label>
                 <Input id="fechaOcurrencia" type="date" {...register("fechaOcurrencia")} className={errors.fechaOcurrencia ? "border-red-500" : ""} />
                 {errors.fechaOcurrencia && <p className="text-sm text-red-500">{errors.fechaOcurrencia.message}</p>}
               </div>
