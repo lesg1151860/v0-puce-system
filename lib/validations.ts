@@ -36,7 +36,7 @@ export const casoSACExtendidoSchema = casoSACBasicoSchema.extend({
 })
 
 export const casoSIUCESchema = z.object({
-  radicado: z.string().min(1, "El radicado es requerido"),
+  radicado: z.string().min(5, "El radicado es requerido y debe tener al menos 5 caracteres"),
   avanceGeneral: z.number().min(0).max(100).default(0),
   estado: z.string().default("PENDIENTE"),
   ie: z.string().min(1, "La institución es requerida"),
@@ -69,7 +69,36 @@ export const casoSIUCESchema = z.object({
   descripcionAvance: z.string().optional(),
   entidadesExternas: z.string().optional(),
   fechaRadicadoExternas: z.string().optional(),
-})
+}).superRefine((data, ctx) => {
+  if (data.fechaRegistro) {
+    const [y, m, d] = data.fechaRegistro.split('-');
+    const dateRegistro = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    const hoy = new Date();
+    if (dateRegistro > hoy) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "La fecha no puede ser futura al día de hoy",
+        path: ["fechaRegistro"]
+      });
+    }
+  }
+
+  if (data.fechaOcurrencia && data.fechaRegistro) {
+    const [yR, mR, dR] = data.fechaRegistro.split('-');
+    const dateRegistro = new Date(parseInt(yR), parseInt(mR) - 1, parseInt(dR));
+
+    const [yO, mO, dO] = data.fechaOcurrencia.split('-');
+    const dateOcurrencia = new Date(parseInt(yO), parseInt(mO) - 1, parseInt(dO));
+
+    if (dateOcurrencia > dateRegistro) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "La fecha de ocurrencia no puede ser posterior a la fecha de registro",
+        path: ["fechaOcurrencia"]
+      });
+    }
+  }
+});
 
 export type LoginFormData = z.infer<typeof loginSchema>
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>
