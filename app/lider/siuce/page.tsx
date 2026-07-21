@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress"
 import { 
   Plus, Search, FileText, CheckCircle, Clock, Edit2, 
   Trash2, AlertTriangle, X, ArrowUpDown, ArrowDown, ArrowUp,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight} from "lucide-react"
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, TrendingUp} from "lucide-react"
 import toast from "react-hot-toast"
 import { InstitucionCombobox } from "@/components/InstitucionCombobox"
 
@@ -165,6 +165,21 @@ export default function SIUCEListPage() {
     return !estado.includes("TERMINADO") && !estado.includes("CERRADO") && !estado.includes("PENDIENTE") && !estado.includes("NUEVO");
   }).length
 
+  const avance0a30 = casos.filter(c => {
+    const avance = Number(c.avance_general) || 0;
+    return avance >= 0 && avance <= 30;
+  }).length;
+  
+  const avance31a70 = casos.filter(c => {
+    const avance = Number(c.avance_general) || 0;
+    return avance >= 31 && avance <= 70;
+  }).length;
+  
+  const avance71a100 = casos.filter(c => {
+    const avance = Number(c.avance_general) || 0;
+    return avance >= 71 && avance <= 100;
+  }).length;
+
   const casosFiltrados = casos.filter((c) => {
   const termLower = searchTerm.toLowerCase()
   const radicadoLower = (c.num_radicado_siuce || "").toLowerCase()
@@ -223,30 +238,68 @@ export default function SIUCEListPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
-        <Card className="border-slate-100 shadow-sm"><CardContent className="p-4 sm:p-6 flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-500 truncate">Total Casos SIUCE</p>
-            <h3 className="text-2xl sm:text-3xl font-bold truncate">{totalCasos}</h3>
-          </div>
-          <FileText className="h-8 w-8 text-indigo-500 shrink-0" />
-        </CardContent></Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+        {/* Fila 1: Generales */}
+        <Card className="border-slate-100 shadow-sm">
+          <CardContent className="p-6 flex items-center justify-between h-full">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Total Casos SIUCE</p>
+              <h3 className="text-3xl font-bold text-slate-900">{totalCasos}</h3>
+            </div>
+            <FileText className="h-8 w-8 text-indigo-500" />
+          </CardContent>
+        </Card>
 
-        <Card className="border-slate-100 shadow-sm"><CardContent className="p-4 sm:p-6 flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-500 truncate">En Progreso</p>
-            <h3 className="text-2xl sm:text-3xl font-bold truncate text-blue-600">{totalEnProgreso}</h3>
-          </div>
-          <Clock className="h-8 w-8 text-blue-500 shrink-0" />
-        </CardContent></Card>
-        
-        <Card className="border-slate-100 shadow-sm"><CardContent className="p-4 sm:p-6 flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-500 truncate">Casos Terminados</p>
-            <h3 className="text-2xl sm:text-3xl font-bold truncate text-emerald-600">{totalTerminados}</h3>
-          </div>
-          <CheckCircle className="h-8 w-8 text-emerald-500 shrink-0" />
-        </CardContent></Card>
+        <Card className="border-slate-100 shadow-sm">
+          <CardContent className="p-6 flex items-center justify-between h-full">
+            <div>
+              <p className="text-sm font-medium text-slate-500">En Progreso</p>
+              <h3 className="text-3xl font-bold text-blue-600">{totalEnProgreso}</h3>
+            </div>
+            <Clock className="h-8 w-8 text-blue-500" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-100 shadow-sm">
+          <CardContent className="p-6 flex items-center justify-between h-full">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Casos Terminados</p>
+              <h3 className="text-3xl font-bold text-emerald-600">{totalTerminados}</h3>
+            </div>
+            <CheckCircle className="h-8 w-8 text-emerald-500" />
+          </CardContent>
+        </Card>
+
+        {/* Fila 2: Rangos de Avance */}
+        <Card className="border-slate-100 shadow-sm">
+          <CardContent className="p-6 flex items-center justify-between h-full">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Avance 0% - 30%</p>
+              <h3 className="text-3xl font-bold text-red-500">{avance0a30}</h3>
+            </div>
+            <TrendingUp className="h-8 w-8 text-red-400" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-100 shadow-sm">
+          <CardContent className="p-6 flex items-center justify-between h-full">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Avance 31% - 70%</p>
+              <h3 className="text-3xl font-bold text-yellow-600">{avance31a70}</h3>
+            </div>
+            <TrendingUp className="h-8 w-8 text-yellow-500" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-100 shadow-sm">
+          <CardContent className="p-6 flex items-center justify-between h-full">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Avance 71% - 100%</p>
+              <h3 className="text-3xl font-bold text-emerald-600">{avance71a100}</h3>
+            </div>
+            <TrendingUp className="h-8 w-8 text-emerald-500" />
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="w-full border-slate-200 shadow-sm">
@@ -314,7 +367,7 @@ export default function SIUCEListPage() {
 
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[1000px] text-sm text-left">
+            <table className="w-full min-w-[1100px] text-sm text-left">
               <thead className="bg-slate-50 text-slate-700 font-medium border-b">
                 <tr>
                   <th 
@@ -341,6 +394,7 @@ export default function SIUCEListPage() {
                     </div>
                   </th>
                   <th className="px-6 py-4 text-center">Avance General</th>
+                  <th className="px-6 py-4 text-center">Estado</th>
                   <th className="px-6 py-4 text-center">Clasificación</th>
                   <th className="px-6 py-4 text-center">Registrado por</th>
                   <th className="px-6 py-4 text-center">Acciones</th>
@@ -349,10 +403,10 @@ export default function SIUCEListPage() {
               
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td colSpan={7} className="text-center py-8 text-slate-500">Cargando registros...</td></tr>
+                  <tr><td colSpan={8} className="text-center py-8 text-slate-500">Cargando registros...</td></tr>
                 ) : paginatedCasos.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-16">
+                    <td colSpan={8} className="text-center py-16">
                       <div className="flex flex-col items-center justify-center text-slate-500">
                         <AlertTriangle className="h-12 w-12 text-slate-300 mb-4" />
                         <p className="text-lg font-medium text-slate-700">No hay casos</p>
@@ -369,8 +423,17 @@ export default function SIUCEListPage() {
                   paginatedCasos.map((caso) => {
                     const clasificacion = obtenerNombreClasificacion(caso.clasificacion);
                     let badgeColor = clasificacionBadgeStyles[clasificacion] || "bg-slate-100 text-slate-800 border-slate-200";
-                    const nombreRegistrador = caso.username || "N/A";
+                    const nombreRegistrador = caso.usuario_registro_siuce || "N/A";
                     const fechaMostrar = caso.fecha_registro ? caso.fecha_registro.split('T')[0] : "N/A";
+                    const nombreEstado = obtenerNombreEstado(caso.estado_siuce);
+                    const estadoUpper = nombreEstado.toUpperCase();
+                    let colorEstado = "bg-blue-50 text-blue-700 border-blue-200";
+                    
+                    if (estadoUpper.includes("TERMINADO") || estadoUpper.includes("CERRADO")) {
+                      colorEstado = "bg-emerald-50 text-emerald-700 border-emerald-200";
+                    } else if (estadoUpper.includes("PENDIENTE") || estadoUpper.includes("NUEVO")) {
+                      colorEstado = "bg-yellow-50 text-yellow-700 border-yellow-200";
+                    }
 
                     return (
                       <tr key={caso.id} className="bg-white hover:bg-slate-50 transition-colors">
@@ -386,11 +449,16 @@ export default function SIUCEListPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
+                          <Badge variant="outline" className={colorEstado}>
+                            {formatearTexto(nombreEstado)}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-center">
                           <Badge variant="outline" className={badgeColor}>
                             {clasificacion}
                           </Badge>
                         </td>
-                        <td className="px-6 py-4 text-center text-slate-600 font-medium">{caso.usuario_registro_siuce}</td>
+                        <td className="px-6 py-4 text-center text-slate-600 font-medium">{nombreRegistrador}</td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex justify-center gap-2">
                             <Link href={`/lider/siuce/editar/${caso.id}`}>
