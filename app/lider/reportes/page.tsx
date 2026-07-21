@@ -8,8 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Input } from "@/components/ui/input"
 import { api } from "@/lib/api" 
+import { InstitucionCombobox } from "@/components/InstitucionCombobox"
 
 const meses = [
   { value: "0", label: "Enero" }, { value: "1", label: "Febrero" }, { value: "2", label: "Marzo" },
@@ -301,31 +301,18 @@ export default function ReportesPage() {
 
             <div className="space-y-2 relative">
               <Label htmlFor="ie_filter">Institución Educativa (I.E.)</Label>
-              <Input 
-                id="ie_filter"
-                list="instituciones-reporte-list"
-                placeholder="Escribe para buscar I.E..." 
-                className="h-10 w-full bg-white"
-                value={filtroIETexto}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setFiltroIETexto(val);
-                  
-                  if (val.trim() === "") {
+              <InstitucionCombobox 
+                opciones={instituciones} 
+                value={(filtroIE === "todas" || filtroIE === "no_match") ? "" : filtroIE} 
+                onChange={(val) => {
+                  if (!val || val.trim() === "") {
                     setFiltroIE("todas");
-                    return;
+                  } else {
+                    setFiltroIE(val);
                   }
-                  
-                  const inst = instituciones.find(i => (i.nombre || i.nombre_ie) === val);
-                  if (inst) setFiltroIE(inst.id.toString());
-                  else setFiltroIE("no_match"); 
                 }}
+                placeholder="Seleccione una I.E..."
               />
-              <datalist id="instituciones-reporte-list">
-                {instituciones.map((inst) => (
-                  <option key={inst.id} value={inst.nombre || inst.nombre_ie} />
-                ))}
-              </datalist>
             </div>
 
             <div className="space-y-2">
