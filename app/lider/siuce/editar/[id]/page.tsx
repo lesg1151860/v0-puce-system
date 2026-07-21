@@ -72,11 +72,13 @@ export default function EditarCasoSIUCEPage() {
   } = useForm<CasoSIUCEFormData>({
     resolver: zodResolver(casoSIUCESchema),
   })
-
   const tipoAgresion = watch("tipoAgresion")
   const danoPrincipal = watch("danoPrincipal")
   const repetitivo = watch("repetitivo")
   const eventoGenerador = watch("eventoGenerador")
+  const hoy = new Date();
+  const todayStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+  const fechaRegistroActual = watch("fechaRegistro");
 
   // 1. CARGA DE CATÁLOGOS Y DATOS DEL CASO
   useEffect(() => {
@@ -340,7 +342,7 @@ export default function EditarCasoSIUCEPage() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="radicado">N° Radicado SIUCE<span className="text-red-500">*</span></Label>
-                <Input id="radicado" maxLength={10} {...register("radicado")} className={errors.radicado ? "border-red-500" : ""} />
+                <Input id="radicado" maxLength={5} {...register("radicado")} className={errors.radicado ? "border-red-500" : ""} />
                 {errors.radicado && <p className="text-sm text-red-500">{errors.radicado.message}</p>}
               </div>
 
@@ -357,11 +359,14 @@ export default function EditarCasoSIUCEPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="fechaRegistro">Fecha de Registro <span className="text-red-500">*</span></Label>
-                <Input id="fechaRegistro" type="date"
-                  {...register("fechaRegistro")} className={errors.fechaRegistro ? "border-red-500" : ""} 
-                  disabled={isLoading}
+                <Input 
+                  id="fechaRegistro" 
+                  type="date" 
+                  max={todayStr} 
+                  {...register("fechaRegistro")} 
+                  className={errors.fechaRegistro ? "border-red-500" : ""} 
                 />
-
+                {errors.fechaRegistro && <p className="text-sm text-red-500">{errors.fechaRegistro.message}</p>}
               </div>
             </div>
           </CardContent>
@@ -496,8 +501,15 @@ export default function EditarCasoSIUCEPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Fecha de Ocurrencia <span className="text-red-500">*</span></Label>
-                <Input type="date" {...register("fechaOcurrencia")} />
+                <Label htmlFor="fechaOcurrencia">Fecha de Ocurrencia <span className="text-red-500">*</span></Label>
+                <Input 
+                  id="fechaOcurrencia" 
+                  type="date" 
+                  max={fechaRegistroActual || todayStr} 
+                  {...register("fechaOcurrencia")} 
+                  className={errors.fechaOcurrencia ? "border-red-500" : ""} 
+                />
+                {errors.fechaOcurrencia && <p className="text-sm text-red-500">{errors.fechaOcurrencia.message}</p>}
               </div>
             </div>
           </CardContent>
