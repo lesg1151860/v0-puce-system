@@ -5,16 +5,15 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Image from "next/image"
+import Link from "next/link"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-
 import { loginSchema, type LoginFormData } from "@/lib/validations"
-import { generateCaptcha, validateCaptcha } from "@/lib/auth"
+import { generateCaptcha } from "@/lib/auth"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -23,7 +22,7 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<LoginFormData>({
+  const { register, handleSubmit, formState: { errors }, setValue, reset } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   })
 
@@ -79,18 +78,22 @@ export default function LoginPage() {
           window.location.href = "/administrador"
         }
       } else {
-        setError("Usuario o contraseña incorrectos")
+        setError("Credenciales inválidas. Por favor, verifica tu usuario y contraseña.")
+        reset({ username: "", password: "", captcha: "" })
+        refreshCaptcha()
         setIsLoading(false)
       }
     } catch (err) {
       setError("Error de conexión con el backend.")
+      reset({ username: "", password: "", captcha: "" })
+      refreshCaptcha()
       setIsLoading(false)
     }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto">
             <Image src="/images/logo-puce.png" alt="Logo PUCE" width={80} height={80} priority className="rounded-full" />
@@ -101,28 +104,61 @@ export default function LoginPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-            <div className="space-y-2">
+            
+            <div className="space-y-1.5">
               <Label htmlFor="username">Usuario</Label>
-              <Input id="username" type="text" {...register("username")} />
+              <Input 
+                id="username" 
+                type="text" 
+                {...register("username")} 
+                className={errors.username ? "border-red-500 focus-visible:ring-red-500" : ""}
+              />
+              {errors.username && <p className="text-xs text-red-500 font-medium">Este campo es requerido</p>}
             </div>
-            <div className="space-y-2">
+            
+            <div className="space-y-1.5">
               <Label htmlFor="password">Contraseña</Label>
               <div className="relative">
-                <Input id="password" type={showPassword ? "text" : "password"} {...register("password")} />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Input 
+                  id="password" 
+                  type={showPassword ? "text" : "password"} 
+                  {...register("password")} 
+                  className={errors.password ? "border-red-500 focus-visible:ring-red-500" : ""}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {errors.password && <p className="text-xs text-red-500 font-medium">Este campo es requerido</p>}
             </div>
-            <div className="space-y-2">
+            
+            {/* Campo Captcha */}
+            <div className="space-y-1.5">
               <Label htmlFor="captcha">{captcha.question}</Label>
-              <Input id="captcha" type="text" {...register("captcha")} />
+              <Input 
+                id="captcha" 
+                type="text" 
+                {...register("captcha")} 
+                className={errors.captcha ? "border-red-500 focus-visible:ring-red-500" : ""}
+              />
+              {errors.captcha && <p className="text-xs text-red-500 font-medium">Este campo es requerido</p>}
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <><Loader2 className="mr-2 animate-spin" /> Accediendo...</> : "Iniciar Sesión"}
-            </Button>
+            
+            <div className="pt-2 flex flex-col items-center space-y-4">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Accediendo...</> : "Iniciar Sesión"}
+              </Button>
+
+              <Link 
+                href="/recuperar-contrasena" 
+                className="text-sm font-medium text-slate-500 hover:text-blue-600 hover:underline transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+            
           </form>
         </CardContent>
       </Card>
