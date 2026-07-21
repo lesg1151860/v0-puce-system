@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Building2, Activity, AlertTriangle } from "lucide-react"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts"
+import { Building2, Activity, AlertTriangle, PieChart as PieChartIcon, Target } from "lucide-react"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -16,7 +16,8 @@ const COLORS = {
 
 const ACCION_COLORS = [
   "#3b82f6", "#22c55e", "#f97316", "#8b5cf6", "#ec4899",
-  "#14b8a6", "#f59e0b", "#6366f1", "#ef4444", "#84cc16"
+  "#14b8a6", "#f59e0b", "#6366f1", "#ef4444", "#84cc16",
+  "#0ea5e9", "#10b981", "#d946ef", "#f43f5e", "#eab308"
 ]
 
 const getAuthToken = () => {
@@ -27,8 +28,6 @@ const getAuthToken = () => {
 
 const getFestivos = (year: number) => {
   const festivos: Date[] = [];
-
-  // Calcular Pascua (Algoritmo de Butcher)
   const a = year % 19;
   const b = Math.floor(year / 100);
   const c = year % 100;
@@ -45,37 +44,31 @@ const getFestivos = (year: number) => {
   const day = ((h + l - 7 * m + 114) % 31) + 1;
   const pascua = new Date(year, month - 1, day);
 
-  // Ley Emiliani
   const addDays = (date: Date, days: number) => new Date(date.getTime() + days * 86400000);
   const toMonday = (date: Date) => {
-    const day = date.getDay(); // 0 es domingo
+    const day = date.getDay();
     const diff = (day === 0) ? 1 : (8 - day);
     return addDays(date, diff);
   };
 
-  // Festivos Fijos
-  festivos.push(new Date(year, 0, 1));   // 1 Ene
-  festivos.push(new Date(year, 4, 1));   // 1 May
-  festivos.push(new Date(year, 6, 20));  // 20 Jul
-  festivos.push(new Date(year, 7, 7));   // 7 Ago
-  festivos.push(new Date(year, 11, 8));  // 8 Dic
-  festivos.push(new Date(year, 11, 25)); // 25 Dic
-
-  // Festivos Ley Emiliani (Se mueven al lunes)
-  festivos.push(toMonday(new Date(year, 0, 6)));    // Reyes
-  festivos.push(toMonday(new Date(year, 2, 19)));   // San José
-  festivos.push(toMonday(new Date(year, 5, 29)));   // San Pedro y San Pablo
-  festivos.push(toMonday(new Date(year, 7, 15)));   // Asunción
-  festivos.push(toMonday(new Date(year, 9, 12)));   // Día de la Raza
-  festivos.push(toMonday(new Date(year, 10, 1)));   // Todos los Santos
-  festivos.push(toMonday(new Date(year, 10, 11)));  // Independencia Cartagena
-
-  // Festivos basados en Pascua
-  festivos.push(addDays(pascua, -3)); // Jueves Santo
-  festivos.push(addDays(pascua, -2)); // Viernes Santo
-  festivos.push(toMonday(addDays(pascua, 40))); // Ascensión
-  festivos.push(toMonday(addDays(pascua, 60))); // Corpus Christi
-  festivos.push(toMonday(addDays(pascua, 68))); // Sagrado Corazón
+  festivos.push(new Date(year, 0, 1));
+  festivos.push(new Date(year, 4, 1));
+  festivos.push(new Date(year, 6, 20));
+  festivos.push(new Date(year, 7, 7));
+  festivos.push(new Date(year, 11, 8));
+  festivos.push(new Date(year, 11, 25));
+  festivos.push(toMonday(new Date(year, 0, 6)));
+  festivos.push(toMonday(new Date(year, 2, 19)));
+  festivos.push(toMonday(new Date(year, 5, 29)));
+  festivos.push(toMonday(new Date(year, 7, 15)));
+  festivos.push(toMonday(new Date(year, 9, 12)));
+  festivos.push(toMonday(new Date(year, 10, 1)));
+  festivos.push(toMonday(new Date(year, 10, 11)));
+  festivos.push(addDays(pascua, -3));
+  festivos.push(addDays(pascua, -2));
+  festivos.push(toMonday(addDays(pascua, 40)));
+  festivos.push(toMonday(addDays(pascua, 60)));
+  festivos.push(toMonday(addDays(pascua, 68)));
 
   return festivos;
 };
@@ -125,15 +118,17 @@ export default function DashboardPage() {
   const [accionesIE, setAccionesIE] = useState<{ accion: string; cantidad: number }[]>([])
   const [accionesSEM, setAccionesSEM] = useState<{ accion: string; cantidad: number }[]>([])
   const [barChartData, setBarChartData] = useState<{ name: string; casos: number; fill: string }[]>([])
+  const [clasificacionData, setClasificacionData] = useState<{ name: string; value: number }[]>([])
+  const [distribucionIEData, setDistribucionIEData] = useState<{ accion: string; cantidad: number }[]>([])
   const [usernameUsuario, setUsernameUsuario] = useState("Usuario")
 
   const procesarAcciones = (listaCasos: any[], campoId: string, catalogoAcciones: any[], nombreCampoCatalogo: string) => {
     const conteo: Record<string, number> = {};
     
-    listaCasos.forEach((caso) => {
+    listaCasos.forEach((caso: { [x: string]: any }) => {
       const idAccion = caso[campoId];
       if (idAccion) {
-        const item = catalogoAcciones.find(cat => cat.id?.toString() === idAccion.toString());
+        const item = catalogoAcciones.find((cat: { id: { toString: () => any } }) => cat.id?.toString() === idAccion.toString());
         const nombre = item ? (item[nombreCampoCatalogo] || item.nombre || "Acción " + idAccion) : "Sin clasificar";
         conteo[nombre] = (conteo[nombre] || 0) + 1;
       }
@@ -159,13 +154,25 @@ export default function DashboardPage() {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://127.0.0.1:8000/api"
 
       try {
-        const [resSAC, resSIUCE, resCatIE, resCatSEM, resEstadosSAC, resEstadosSIUCE] = await Promise.allSettled([
-          api?.getCasosSAC ? api.getCasosSAC() : fetch(`${baseUrl}/caso-sac/`, { headers }).then(r => r.json()),
+        // AGREGAMOS LOS ENDPOINTS DE INSTITUCIONES Y CLASIFICACIONES AL PROMISE
+        const [
+          resSAC, 
+          resSIUCE, 
+          resCatIE, 
+          resCatSEM, 
+          resEstadosSAC, 
+          resEstadosSIUCE,
+          resInstitucionesReq,
+          resClasifReq
+        ] = await Promise.allSettled([
+          api?.getCasosSAC ? api.getCasosSAC() : fetch(`${baseUrl}/casos-sac/`, { headers }).then(r => r.json()),
           api?.getCasosSIUCE ? api.getCasosSIUCE() : fetch(`${baseUrl}/caso-siuce/`, { headers }).then(r => r.json()),
           api?.getAccionesIE ? api.getAccionesIE() : fetch(`${baseUrl}/acciones_ie/`, { headers }).then(r => r.json()),
           api?.getAccionesSEM ? api.getAccionesSEM() : fetch(`${baseUrl}/acciones_sem/`, { headers }).then(r => r.json()),
-          api?.getEstadosSAC ? api.getEstadosSAC() : fetch(`${baseUrl}/estados_sac/`, { headers }).then(r => r.json()),
-          api?.getEstadosSIUCE ? api.getEstadosSIUCE() : fetch(`${baseUrl}/estados_siuce/`, { headers }).then(r => r.json()),
+          api?.getEstadosSAC ? api.getEstadosSAC() : fetch(`${baseUrl}/estado_sac/`, { headers }).then(r => r.json()),
+          api?.getEstadosSIUCE ? api.getEstadosSIUCE() : fetch(`${baseUrl}/estado_siuce/`, { headers }).then(r => r.json()),
+          fetch(`${baseUrl}/institucion_educativa/`, { headers }).then(r => r.json()),
+          fetch(`${baseUrl}/clasificacion_caso/`, { headers }).then(r => r.json()),
         ]);
 
         const extractData = (res: any) => {
@@ -177,9 +184,12 @@ export default function DashboardPage() {
 
         const listaSAC = extractData(resSAC);
         const listaSIUCE = extractData(resSIUCE);
-        const catIE = extractData(resCatIE);
+        const catIE = extractData(resCatIE); // Este catálogo es de acciones I.E.
         const catSEM = extractData(resCatSEM);
         const estadosSAC = extractData(resEstadosSAC);
+        const instituciones = extractData(resInstitucionesReq);
+        const clasificaciones = extractData(resClasifReq);
+
         const objTerminado = estadosSAC.find((e:any) => {
           const val = (e.estado_sac || e.nombre || "").toString().toUpperCase();
           return val.includes("TERMINADO") || val.includes("RESUELTO");
@@ -192,27 +202,30 @@ export default function DashboardPage() {
 
         const idTerminadoStr = objTerminado ? objTerminado.id?.toString() : null;
         const idSeguimientoStr = objSeguimiento ? objSeguimiento.id?.toString() : null;
-        const totalSAC = listaSAC.length;
         
+        const totalSAC = listaSAC.length;
         const resueltosSAC = listaSAC.filter((c: any) => {
           const id = c.estado_sac_id ?? (typeof c.estado_sac === 'object' ? c.estado_sac?.id : c.estado_sac);
-          return id !== undefined && id !== null && id.toString() === idTerminadoStr;
+          return (id !== undefined && id !== null && id.toString() === idTerminadoStr) || c.respondido === true;
         }).length;
         
         const seguimientoSAC = listaSAC.filter((c: any) => {
           const id = c.estado_sac_id ?? (typeof c.estado_sac === 'object' ? c.estado_sac?.id : c.estado_sac);
-          return id !== undefined && id !== null && id.toString() === idSeguimientoStr;
+          return (id !== undefined && id !== null && id.toString() === idSeguimientoStr) && c.respondido === false;
         }).length;
+        
         const sinRespuestaSAC = Math.max(0, totalSAC - resueltosSAC - seguimientoSAC);
         const totalSIUCE = listaSIUCE.length;
         const resueltosSIUCE = listaSIUCE.filter((c: any) => {
           const estado = (c.estado_siuce || c.estado || "").toString().toUpperCase();
-          return estado.includes("TERMINADO") || c.avance_general === 100;
+          return estado.includes("TERMINADO") || Number(c.avance_general) === 100;
         }).length;
+        
         const pendientesSIUCE = listaSIUCE.filter((c: any) => {
           const estado = (c.estado_siuce || c.estado || "").toString().toUpperCase();
-          return estado.includes("PENDIENTE") || c.avance_general === 0;
+          return estado.includes("PENDIENTE") || Number(c.avance_general) === 0;
         }).length;
+        
         const seguimientoSIUCE = Math.max(0, totalSIUCE - resueltosSIUCE - pendientesSIUCE);
         const sinRespuestaSIUCE = pendientesSIUCE;
 
@@ -224,6 +237,51 @@ export default function DashboardPage() {
           sac: { total: totalSAC, seguimiento: seguimientoSAC, resueltos: resueltosSAC, sinRespuesta: sinRespuestaSAC },
           siuce: { total: totalSIUCE, seguimiento: seguimientoSIUCE, resueltos: resueltosSIUCE, sinRespuesta: sinRespuestaSIUCE }
         });
+
+        // PROCESAMIENTO 1: Distribución por Clasificación (SAC + SIUCE)
+        const conteoClasif: Record<string, number> = {};
+        const procesarClasificacion = (lista: any[]) => {
+          lista.forEach(c => {
+            if (c.clasificacion) {
+              const clasif = clasificaciones.find((cat: { id: { toString: () => any } }) => cat.id?.toString() === c.clasificacion?.toString());
+              const nombre = clasif ? (clasif.descripcion || clasif.nombre || `Tipo ${c.clasificacion}`) : "Sin clasificar";
+              conteoClasif[nombre] = (conteoClasif[nombre] || 0) + 1;
+            }
+          });
+        };
+        procesarClasificacion(listaSAC);
+        procesarClasificacion(listaSIUCE);
+        
+        const dataClasif = Object.entries(conteoClasif)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value);
+        setClasificacionData(dataClasif);
+
+        // PROCESAMIENTO 3: Distribución por Institución Educativa
+        const conteoIE: Record<string, number> = {};
+        // Para SIUCE usamos institucion_educativa
+        listaSIUCE.forEach((c: { institucion_educativa: any }) => {
+          const idIE = c.institucion_educativa;
+          if (idIE) {
+            const ie = instituciones.find((i: { id: { toString: () => any } }) => i.id?.toString() === idIE?.toString());
+            const nombre = ie ? (ie.nombre || ie.nombre_ie || `I.E. ${idIE}`) : "Institución no encontrada";
+            conteoIE[nombre] = (conteoIE[nombre] || 0) + 1;
+          }
+        });
+        // Para SAC usamos institucion_1 (Principal)
+        listaSAC.forEach((c: { institucion_1: any }) => {
+          const idIE = c.institucion_1;
+          if (idIE) {
+            const ie = instituciones.find((i: { id: { toString: () => any } }) => i.id?.toString() === idIE?.toString());
+            const nombre = ie ? (ie.nombre || ie.nombre_ie || `I.E. ${idIE}`) : "Institución no encontrada";
+            conteoIE[nombre] = (conteoIE[nombre] || 0) + 1;
+          }
+        });
+
+        const dataIE = Object.entries(conteoIE)
+          .map(([accion, cantidad]) => ({ accion, cantidad }))
+          .sort((a, b) => b.cantidad - a.cantidad);
+        setDistribucionIEData(dataIE);
 
         const alertasSAC = listaSAC
           .filter((c: any) => {
@@ -287,6 +345,16 @@ export default function DashboardPage() {
 
   if (!stats) return <div className="flex items-center justify-center min-h-[400px]"><div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" /></div>
 
+  // PROCESAMIENTO 2: Cálculos para la gráfica Gauge de porcentaje
+  const porcentajeResueltos = stats.totalCasos > 0 
+    ? Math.round((stats.casosResueltos / stats.totalCasos) * 100) 
+    : 0;
+    
+  const dataGauge = [
+    { name: "Resueltos", value: porcentajeResueltos, fill: "#10b981" }, // Verde emerald
+    { name: "Pendientes", value: 100 - porcentajeResueltos, fill: "#e2e8f0" }, // Gris suave
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -344,7 +412,6 @@ export default function DashboardPage() {
 
       {/* --- RESUMEN DE ESTADÍSTICAS --- */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Card: Total */}
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-500">Total de Casos</CardTitle></CardHeader>
           <CardContent>
@@ -353,7 +420,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        {/* Card: En Seguimiento */}
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-blue-600">En Seguimiento</CardTitle></CardHeader>
           <CardContent>
@@ -362,7 +428,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        {/* Card: Resueltos */}
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-emerald-600">Resueltos</CardTitle></CardHeader>
           <CardContent>
@@ -371,7 +436,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        {/* Card: Sin Respuesta */}
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-red-600">Sin Respuesta</CardTitle></CardHeader>
           <CardContent>
@@ -380,6 +444,119 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* --- GRÁFICAS 1 Y 2: MISMA LÍNEA VISUAL --- */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Gráfica 1: Torta de Clasificación */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieChartIcon className="h-5 w-5 text-indigo-500" />
+              Distribución por Clasificación
+            </CardTitle>
+            <CardDescription>Totalidad de casos según tipo de clasificación</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {clasificacionData.length === 0 ? (
+              <p className="text-center text-slate-500 py-12">No hay clasificaciones registradas.</p>
+            ) : (
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={clasificacionData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={65}
+                      outerRadius={90}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {clasificacionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={ACCION_COLORS[index % ACCION_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} />
+                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px' }}/>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Gráfica 2: Porcentaje de Resolución */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-emerald-500" />
+              Índice de Resolución Global
+            </CardTitle>
+            <CardDescription>Porcentaje de casos resueltos sobre el total general</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center justify-center">
+            <div className="h-[240px] w-full mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={dataGauge}
+                    cx="50%"
+                    cy="75%"
+                    startAngle={180}
+                    endAngle={0}
+                    innerRadius={90}
+                    outerRadius={115}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {dataGauge.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <text x="50%" y="65%" textAnchor="middle" dominantBaseline="middle" className="text-5xl font-bold fill-slate-800">
+                    {porcentajeResueltos}%
+                  </text>
+                  <text x="50%" y="85%" textAnchor="middle" dominantBaseline="middle" className="text-sm font-medium fill-slate-500">
+                    {stats.casosResueltos} de {stats.totalCasos} Casos Resueltos
+                  </text>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* --- GRÁFICA 3: DISTRIBUCIÓN POR I.E. (LÍNEA COMPLETA) --- */}
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-blue-500" />
+            Distribución por Institución Educativa
+          </CardTitle>
+          <CardDescription>Consolidado general de casos (SAC y SIUCE) agrupados por colegio</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {distribucionIEData.length === 0 ? (
+            <p className="text-center text-slate-500 py-10">No hay instituciones registradas con casos.</p>
+          ) : (
+            <div className="h-[450px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={distribucionIEData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={true} />
+                  <XAxis type="number" tick={{ fill: "#64748b" }} allowDecimals={false} />
+                  <YAxis type="category" dataKey="accion" tick={{ fill: "#64748b", fontSize: 11 }} width={300} />
+                  <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px" }} cursor={{fill: '#f8fafc'}} />
+                  <Bar dataKey="cantidad" radius={[0, 4, 4, 0]}>
+                    {distribucionIEData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={ACCION_COLORS[index % ACCION_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle>Distribución de Casos por Sistema</CardTitle></CardHeader>
