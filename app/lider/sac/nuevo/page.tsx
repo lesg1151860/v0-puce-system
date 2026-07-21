@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { ArrowLeft, Loader2, Save, FileText, School, BarChart3, Calendar, ClipboardCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
 import { InstitucionCombobox } from "@/components/InstitucionCombobox"
 
@@ -46,6 +48,11 @@ export default function NuevoCasoSACPage() {
     },
   })
 
+
+  const hoy = new Date();
+  const todayStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+  
+  const watchFechaRadicacion = watch("fecha_radicacion");
   const watchTraslado = watch("traslado_ie", false)
   const watchRespondido = watch("respondido", false)
   const watchProrroga = watch("prorroga", false)
@@ -256,25 +263,37 @@ export default function NuevoCasoSACPage() {
     }
   }
 
+  if (loadingCatalogs) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <p className="text-xs text-slate-500 mt-2 font-medium">Sincronizando catálogos de SAC...</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <Button variant="ghost" className="mb-2" onClick={() => router.back()}>
-        <ArrowLeft className="mr-2 h-4 w-4" /> Volver al directorio
-      </Button>
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Link href="/lider/sac">
+          <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Nuevo Caso SAC</h1>
+          <p className="text-slate-600">Sistema de Atención al Ciudadano</p>
+        </div>
+      </div>
       
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
         
-        {/* Bloque 1: Información Básica + Descripción */}
+        {/* Bloque 1: Identificación del Caso */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <FileText className="h-6 w-6 text-blue-600" />
-              <CardTitle>Registrar Nuevo Caso SAC</CardTitle>
-            </div>
-            <CardDescription>Completa la información básica y el contexto del radicado del ciudadano.</CardDescription>
+            <CardTitle>Identificación del Caso</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               
               <div className="space-y-2">
                 <Label>N° Radicado SAC <span className="text-red-500">*</span></Label>
@@ -288,14 +307,11 @@ export default function NuevoCasoSACPage() {
                       message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
                     }
                   })}
-                  className={errors.num_radicado_sac ? "border-red-500 focus-visible:ring-red-500 uppercase" : "uppercase"}
+                  className={errors.num_radicado_sac ? "border-red-500 uppercase" : "uppercase"}
                   disabled={isLoading}
                 />
-                
                 {errors.num_radicado_sac && (
-                  <p className="text-xs font-bold text-red-500 mt-1 animate-fade-in">
-                    {errors.num_radicado_sac.message as string}
-                  </p>
+                  <p className="text-sm text-red-500 mt-1">{errors.num_radicado_sac.message as string}</p>
                 )}
               </div>
 
@@ -313,10 +329,20 @@ export default function NuevoCasoSACPage() {
                 <Label>Fecha de Radicación <span className="text-red-500">*</span></Label>
                 <Input
                   type="date"
-                  {...register("fecha_radicacion", { required: true })}
+                  max={todayStr}
+                  {...register("fecha_radicacion", { 
+                    required: "La fecha es requerida",
+                    validate: (value) => {
+                      if (!value) return true;
+                      return value <= todayStr || "La fecha no puede ser mayor al día de hoy.";
+                    }
+                  })}
                   className={errors.fecha_radicacion ? "border-red-500" : ""}
                   disabled={isLoading}
                 />
+                {errors.fecha_radicacion && (
+                  <p className="text-sm text-red-500 mt-1">{errors.fecha_radicacion.message as string}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -338,9 +364,31 @@ export default function NuevoCasoSACPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </CardContent>
+        </Card>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label>Nombre del Estudiante</Label>
+        {/* Bloque 2: Detalles Adicionales */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Detalles Adicionales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+                <Label>Institución de Origen / Principal <span className="text-red-500">*</span></Label>
+                <InstitucionCombobox 
+                  opciones={instituciones} 
+                  value={watch("institucion_1") || ""} 
+                  onChange={(val) => setValue("institucion_1", val, { shouldValidate: true })}
+                  placeholder="Buscar I.E. de origen..."
+                  disabled={isLoading} 
+                />
+                {errors.institucion_1 && <p className="text-sm text-red-500">{String(errors.institucion_1.message ?? "")}</p>}
+              </div>
+
+              <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+                <Label>Nombre del Estudiante (Opcional)</Label>
                 <Input
                   placeholder="Nombre del alumno implicado"
                   {...register("estudiante")}
@@ -349,7 +397,7 @@ export default function NuevoCasoSACPage() {
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2 border-t pt-4 mt-2">
+              <div className="space-y-2 sm:col-span-2 lg:col-span-3">
                 <Label>Descripción / Observaciones</Label>
                 <Textarea
                   placeholder="Describa el caso detalladamente..."
@@ -362,48 +410,31 @@ export default function NuevoCasoSACPage() {
                   Información adicional sobre la queja, reclamo o solicitud. Se guardará automáticamente en mayúsculas.
                 </p>
               </div>
-
             </div>
           </CardContent>
         </Card>
 
-        {/* Bloque 2: Traslado Institucional */}
+        {/* Bloque 3: Traslado Institucional */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <School className="h-6 w-6 text-blue-600" />
-                <CardTitle>Traslado a Institución Educativa</CardTitle>
-              </div>
-              <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-full border shadow-sm">
-                <Switch
-                  checked={watchTraslado}
-                  onCheckedChange={(checked) => setValue("traslado_ie", checked)}
-                  disabled={isLoading}
-                />
-                <span className="text-xs font-medium text-slate-600">¿Aplica Traslado?</span>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b mb-4">
+            <CardTitle>Traslado a Institución Educativa</CardTitle>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="traslado_ie"
+                checked={watchTraslado}
+                onCheckedChange={(checked) => setValue("traslado_ie", checked)}
+                disabled={isLoading}
+              />
+              <Label htmlFor="traslado_ie">¿Aplica Traslado?</Label>
             </div>
-            <CardDescription>Habilita esta sección si el caso requiere asignarse a colegios oficiales.</CardDescription>
           </CardHeader>
-          <CardContent className={`space-y-4 transition-all duration-300 ${watchTraslado ? "opacity-100" : "opacity-40 pointer-events-none bg-slate-50/30"}`}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className={`space-y-4 transition-all duration-300 ${watchTraslado ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              
               <div className="space-y-2">
-                <Label>Institución de Origen / Principal <span className="text-red-500">*</span></Label>
+                <Label>Institución Secundaria (Destino)</Label>
                 <InstitucionCombobox 
-                  opciones={instituciones.filter(inst => inst.id.toString() !== watch("institucion_2"))} 
-                  value={watch("institucion_1") || ""} 
-                  onChange={(val) => setValue("institucion_1", val, { shouldValidate: true })}
-                  placeholder="Buscar I.E. de origen..."
-                  disabled={isLoading || !watchTraslado}
-                />
-                {errors.institucion_1 && <p className="text-sm text-red-500">{String(errors.institucion_1.message ?? "")}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Institución Secundaria <span className="text-red-500">*</span></Label>
-                <InstitucionCombobox 
-                  opciones={instituciones.filter(inst => inst.id.toString() !== watch("institucion_1"))} 
+                  opciones={instituciones} 
                   value={watch("institucion_2") || ""} 
                   onChange={(val) => setValue("institucion_2", val, { shouldValidate: true })}
                   placeholder="Buscar I.E. de destino..."
@@ -418,7 +449,7 @@ export default function NuevoCasoSACPage() {
                   placeholder="Ej: CUC2026ER002434"
                   maxLength={15}
                   {...register("num_radicado_traslado", { 
-                    required: watchTraslado,
+                    required: watchTraslado ? "Requerido" : false,
                     pattern: {
                       value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
                       message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
@@ -428,9 +459,7 @@ export default function NuevoCasoSACPage() {
                   disabled={isLoading || !watchTraslado}
                 />
                 {errors.num_radicado_traslado && (
-                  <p className="text-xs font-bold text-red-500 mt-1 animate-fade-in">
-                    {errors.num_radicado_traslado.message as string}
-                  </p>
+                  <p className="text-sm text-red-500 mt-1">{errors.num_radicado_traslado.message as string}</p>
                 )}
               </div>
 
@@ -449,52 +478,59 @@ export default function NuevoCasoSACPage() {
                   disabled={isLoading || !watchTraslado}
                 />
                 {errors.radicado_externa && (
-                  <p className="text-xs font-bold text-red-500 mt-1 animate-fade-in">
-                    {errors.radicado_externa.message as string}
-                  </p>
+                  <p className="text-sm text-red-500 mt-1">{errors.radicado_externa.message as string}</p>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Bloque 3: Información de Prórroga */}
+        {/* Bloque 4: Información de Prórroga */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-6 w-6 text-blue-600" />
-                <CardTitle>Información de Prórroga</CardTitle>
-              </div>
-              <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-full border shadow-sm">
-                <Switch
-                  checked={watchProrroga}
-                  onCheckedChange={(checked) => setValue("prorroga", checked)}
-                  disabled={isLoading}
-                />
-                <span className="text-xs font-medium text-slate-600">¿Requiere Prórroga?</span>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b mb-4">
+            <CardTitle>Información de Prórroga</CardTitle>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="prorroga"
+                checked={watchProrroga}
+                onCheckedChange={(checked) => setValue("prorroga", checked)}
+                disabled={isLoading}
+              />
+              <Label htmlFor="prorroga">¿Requiere Prórroga?</Label>
             </div>
-            <CardDescription>Habilita si la solicitud requiere extensión legal de términos de respuesta.</CardDescription>
           </CardHeader>
-          <CardContent className={`space-y-4 transition-all duration-300 ${watchProrroga ? "opacity-100" : "opacity-40 pointer-events-none bg-slate-50/30"}`}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className={`space-y-4 transition-all duration-300 ${watchProrroga ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <Label>Fecha de Nueva Prórroga <span className="text-red-500">*</span></Label>
                 <Input
                   type="date"
-                  {...register("fecha_nueva_prorroga", { required: watchProrroga })}
+                  min={watchFechaRadicacion} // No puede ser menor a la fecha de radicación
+                  {...register("fecha_nueva_prorroga", { 
+                    required: watchProrroga ? "Requerido" : false,
+                    validate: (value) => {
+                      if (!watchProrroga || !value) return true;
+                      if (watchFechaRadicacion && value < watchFechaRadicacion) {
+                        return "La prórroga no puede ser anterior a la fecha de radicación.";
+                      }
+                      return true;
+                    }
+                  })}
                   className={errors.fecha_nueva_prorroga ? "border-red-500" : ""}
                   disabled={isLoading || !watchProrroga}
                 />
+                {errors.fecha_nueva_prorroga && (
+                  <p className="text-sm text-red-500 mt-1">{errors.fecha_nueva_prorroga.message as string}</p>
+                )}
               </div>
+              
               <div className="space-y-2">
                 <Label>Radicado de Prórroga <span className="text-red-500">*</span></Label>
                 <Input
                   placeholder="Ej: CUC2026EO002434"
                   maxLength={15}
                   {...register("radicado_prorroga", {
-                    required: watchProrroga,
+                    required: watchProrroga ? "Requerido" : false,
                     pattern: {
                       value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
                       message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
@@ -504,71 +540,60 @@ export default function NuevoCasoSACPage() {
                   disabled={isLoading || !watchProrroga}
                 />
                 {errors.radicado_prorroga && (
-                  <p className="text-xs font-bold text-red-500 mt-1 animate-fade-in">
-                    {errors.radicado_prorroga.message as string}
-                  </p>
+                  <p className="text-sm text-red-500 mt-1">{errors.radicado_prorroga.message as string}</p>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Bloque 4: Contestación de la I.E */}
+        {/* Bloque 5: Contestación de la I.E */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ClipboardCheck className="h-6 w-6 text-blue-600" />
-                <CardTitle>Contestación de la I.E</CardTitle>
-              </div>
-              <div className="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-full border shadow-sm">
-                <Switch
-                  checked={watchContestacion}
-                  onCheckedChange={(checked) => setValue("contestacion_ie", checked)}
-                  disabled={isLoading}
-                />
-                <span className="text-xs font-medium text-slate-600">¿Contestó la I.E?</span>
-              </div>
-            </div>
-            <CardDescription>Registra el radicado emitido por la Institución Educativa vinculada.</CardDescription>
-          </CardHeader>
-          <CardContent className={`space-y-4 transition-all duration-300 ${watchContestacion ? "opacity-100" : "opacity-40 pointer-events-none bg-slate-50/30"}`}>
-            <div className="space-y-2">
-              <Label>Radicado Contestación I.E <span className="text-red-500">*</span></Label>
-              <Input
-                placeholder="Ej: CUC2026ER002434"
-                maxLength={15}
-                {...register("radicado_contestacion_ie", { 
-                  required: watchContestacion,
-                  pattern: {
-                    value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
-                    message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
-                  } 
-                })}
-                className={errors.radicado_contestacion_ie ? "border-red-500 uppercase" : "uppercase"}
-                disabled={isLoading || !watchContestacion}
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b mb-4">
+            <CardTitle>Contestación de la I.E</CardTitle>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="contestacion_ie"
+                checked={watchContestacion}
+                onCheckedChange={(checked) => setValue("contestacion_ie", checked)}
+                disabled={isLoading}
               />
-              {errors.radicado_contestacion_ie && (
-                <p className="text-xs font-bold text-red-500 mt-1 animate-fade-in">
-                  {errors.radicado_contestacion_ie.message as string}
-                </p>
-              )}
+              <Label htmlFor="contestacion_ie">¿Contestó la I.E?</Label>
+            </div>
+          </CardHeader>
+          <CardContent className={`space-y-4 transition-all duration-300 ${watchContestacion ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Radicado Contestación I.E <span className="text-red-500">*</span></Label>
+                <Input
+                  placeholder="Ej: CUC2026ER002434"
+                  maxLength={15}
+                  {...register("radicado_contestacion_ie", { 
+                    required: watchContestacion ? "Requerido" : false,
+                    pattern: {
+                      value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
+                      message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
+                    } 
+                  })}
+                  className={errors.radicado_contestacion_ie ? "border-red-500 uppercase" : "uppercase"}
+                  disabled={isLoading || !watchContestacion}
+                />
+                {errors.radicado_contestacion_ie && (
+                  <p className="text-sm text-red-500 mt-1">{errors.radicado_contestacion_ie.message as string}</p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Bloque 5: Clasificación y Cierre */}
-        <Card className={watchRespondido ? "border-emerald-200 transition-colors" : "transition-colors"}>
+        {/* Bloque 6: Clasificación y Cierre */}
+        <Card>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-6 w-6 text-blue-600" />
-              <CardTitle>Clasificación y Cierre de Caso</CardTitle>
-            </div>
-            <CardDescription>Define la clasificación, estado de control y el radicado final de cierre con el ciudadano.</CardDescription>
+            <CardTitle>Clasificación y Cierre de Caso</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              
               <div className="space-y-2">
                 <Label>Clasificación del Caso <span className="text-red-500">*</span></Label>
                 <Select value={watch("clasificacion") || ""} onValueChange={(val) => setValue("clasificacion", val, { shouldValidate: true })} disabled={isLoading}>
@@ -603,17 +628,14 @@ export default function NuevoCasoSACPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            <div className="pt-4 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-              
-              <div className="space-y-2 md:col-span-1">
-                <Label>N° Radicado de Respuesta SAC (Cierre) {watchRespondido && <span className="text-red-500">*</span>}</Label>
+              <div className="space-y-2">
+                <Label>N° Radicado de Respuesta SAC {watchRespondido && <span className="text-red-500">*</span>}</Label>
                 <Input
                   placeholder="Ej: CUC2026RS004812"
                   maxLength={15}
                   {...register("radicado_respuesta", { 
-                    required: watchRespondido ? "Debe ingresar el radicado al estar el caso respondido." : false,
+                    required: watchRespondido ? "Obligatorio al responder" : false,
                     pattern: {
                       value: /^[a-zA-Z]{3}\d{4}[a-zA-Z]{2}\d{6}$/,
                       message: "Estructura inválida. Debe ser: 3 letras, 4 números, 2 letras y 6 números."
@@ -623,38 +645,35 @@ export default function NuevoCasoSACPage() {
                   disabled={isLoading || (!watchRespondido && watch("radicado_respuesta") === "")}
                 />
                 {errors.radicado_respuesta && (
-                  <p className="text-xs font-medium text-red-500 mt-1 animate-fade-in">
-                    {errors.radicado_respuesta.message as string}
-                  </p>
+                  <p className="text-sm text-red-500 mt-1">{errors.radicado_respuesta.message as string}</p>
                 )}
-                <p className="text-[11px] text-slate-500">Al escribir el radicado el estado cambiará automáticamente a TERMINADO.</p>
               </div>
 
-              <div className="md:col-span-1 flex flex-col justify-start pt-6">
-                <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-full border shadow-sm w-fit">
+              <div className="space-y-2 lg:col-span-3">
+                <div className="flex items-center space-x-2 pt-2">
                   <Switch
+                    id="respondido"
                     checked={watchRespondido}
                     onCheckedChange={(checked) => setValue("respondido", checked)}
                     disabled={isLoading}
                   />
-                  <span className="text-sm font-medium text-slate-600">¿El caso fue Respondido?</span>
+                  <Label htmlFor="respondido">¿El caso fue Respondido?</Label>
                 </div>
               </div>
 
             </div>
-
-            {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-200 mt-4">
-                {error}
-              </div>
-            )}
-
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 mt-6 shadow-sm" disabled={isLoading || loadingCatalogs}>
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              {isLoading ? "Registrando..." : "Guardar Caso SAC"}
-            </Button>
           </CardContent>
         </Card>
+
+        <div className="flex justify-end gap-4">
+          <Link href="/lider/sac">
+            <Button type="button" variant="outline">Cancelar</Button>
+          </Link>
+          <Button type="submit" className="bg-blue-600 hover:bg-blue-700 shadow-sm" disabled={isLoading || loadingCatalogs}>
+            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registrando...</> : <><Save className="mr-2 h-4 w-4" /> Guardar Caso SAC</>}
+          </Button>
+        </div>
+        
       </form>
     </div>
   )
