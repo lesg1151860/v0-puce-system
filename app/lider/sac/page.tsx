@@ -37,9 +37,8 @@ export default function CasosSACPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filtroEstado, setFiltroEstado] = useState<string>("todos")
   const [filtroUsuario, setFiltroUsuario] = useState<string>("todos") 
-  const [filtroIE, setFiltroIE] = useState<string>("todas") 
+  const [filtroIE, setFiltroIE] = useState<string>("todas")
   const [filtroRespondido, setFiltroRespondido] = useState<string>("todos")
-  const [filtroInstitucion, setFiltroInstitucion] = useState<string>("todas")
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -195,8 +194,11 @@ export default function CasosSACPage() {
     const coincideEstado = filtroEstado === "todos" ? true : c.estado_sac?.toString() === filtroEstado
     const nombreRegistrador = c.nombre_lider || "Desconocido"
     const coincideUsuario = filtroUsuario === "todos" ? true : nombreRegistrador === filtroUsuario
-    const coincideIE = filtroIE === "todas" ? true : c.institucion_educativa?.toString() === filtroIE
     const coincideRespondido = filtroRespondido === "todos" ? true : (filtroRespondido === "si" ? c.respondido === true : c.respondido === false)
+
+    const coincideIE = filtroIE === "todas" 
+      ? true 
+      : (c.institucion_1?.toString() === filtroIE || c.institucion_2?.toString() === filtroIE)
 
     return coincideBusqueda && coincideEstado && coincideUsuario && coincideIE && coincideRespondido
   })
@@ -299,10 +301,14 @@ export default function CasosSACPage() {
             
             <div className="w-full sm:w-[300px]"> 
               <InstitucionCombobox 
-                opciones={[{ id: "todas", nombre: "Todas las I.E." }, ...instituciones]} 
-                value={filtroInstitucion} 
+                opciones={instituciones} 
+                value={filtroIE === "todas" ? "" : filtroIE} 
                 onChange={(val) => { 
-                  setFiltroInstitucion(val); 
+                  if (!val || val.trim() === "") {
+                    setFiltroIE("todas");
+                  } else {
+                    setFiltroIE(val);
+                  }
                   setCurrentPage(1); 
                 }}
                 placeholder="Buscar Institución Educativa..."
