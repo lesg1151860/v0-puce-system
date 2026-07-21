@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
 import { ArrowLeft, Loader2, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -16,11 +15,9 @@ import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { casoSIUCESchema, type CasoSIUCEFormData } from "@/lib/validations"
 import { sanitizeText, hasSpecialChars, SPECIAL_CHARS_ERROR } from "@/lib/text-utils"
 import { api } from "@/lib/api"
 import { InstitucionCombobox } from "@/components/InstitucionCombobox"
-
 
 const tiposAgresionConDano: Record<string, { agresiones: string[], dano: string }> = {
   "Económico": { agresiones: ["Hurto"], dano: "Económico" },
@@ -35,8 +32,6 @@ export default function NuevoCasoSIUCEPage() {
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState("")
   const [showOtroEvento, setShowOtroEvento] = useState(false)
-  
-  // 1. Estados de Catálogos Administrables
   const [instituciones, setInstituciones] = useState<any[]>([])
   const [tiposIdentificacion, setTiposIdentificacion] = useState<any[]>([])
   const [grados, setGrados] = useState<any[]>([])
@@ -48,29 +43,46 @@ export default function NuevoCasoSIUCEPage() {
   const [accionesIE, setAccionesIE] = useState<any[]>([])
   const [accionesSEM, setAccionesSEM] = useState<any[]>([])
   const [clasificaciones, setClasificaciones] = useState<any[]>([])
+  const [estadosSIUCE, setEstadosSIUCE] = useState<any[]>([])
   const [seguimientoIE, setSeguimientoIE] = useState(false)
   const [seguimientoPolicia, setSeguimientoPolicia] = useState(false)
   const [avanceIE, setAvanceIE] = useState(0)
   const [avanceSEM, setAvanceSEM] = useState(0)
   const [avanceGeneral, setAvanceGeneral] = useState(0)
   const [estadoCalculado, setEstadoCalculado] = useState<"PENDIENTE" | "EN SEGUIMIENTO" | "TERMINADO">("PENDIENTE")
+
   const {
     register, handleSubmit, setValue, watch, clearErrors, setError: setFieldError, formState: { errors },
-  } = useForm<CasoSIUCEFormData>({
-    resolver: zodResolver(casoSIUCESchema),
-    defaultValues: { avanceGeneral: 0, estado: "PENDIENTE", repetitivo: false, seguimientoIE: false, numeroSeguimientoIE: 0, seguimientoPolicia: false, numeroSeguimientoPolicia: 0, cec: false, avanceIE: 0, avanceSEM: 0, clasificacion: "Tipo 1" },
+  } = useForm<any>({
+    mode: "onChange",
+    defaultValues: { 
+      avanceGeneral: 0, 
+      estado: "PENDIENTE", 
+      repetitivo: false, 
+      seguimientoIE: false, 
+      numeroSeguimientoIE: 0, 
+      seguimientoPolicia: false, 
+      numeroSeguimientoPolicia: 0, 
+      cec: false, 
+      avanceIE: 0, 
+      avanceSEM: 0, 
+      clasificacion: "Tipo 1" 
+    },
   })
+
+  const hoy = new Date();
+  const todayStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+  const fechaRegistroActual = watch("fechaRegistro");
   const tipoAgresion = watch("tipoAgresion")
   const danoPrincipal = watch("danoPrincipal")
   const repetitivo = watch("repetitivo")
   const eventoGenerador = watch("eventoGenerador")
 
-
   const getClasificacionStyle = (nombre: string) => {
-  const nombreLower = nombre.toLowerCase();
-  if (nombreLower.includes("tipo 3")) return "bg-red-100 text-red-800 border-red-200";
-  if (nombreLower.includes("tipo 2")) return "bg-orange-100 text-orange-800 border-orange-200";
-  return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    const nombreLower = nombre.toLowerCase();
+    if (nombreLower.includes("tipo 3")) return "bg-red-100 text-red-800 border-red-200";
+    if (nombreLower.includes("tipo 2")) return "bg-orange-100 text-orange-800 border-orange-200";
+    return "bg-yellow-100 text-yellow-800 border-yellow-200";
   };
 
   useEffect(() => {
@@ -78,7 +90,7 @@ export default function NuevoCasoSIUCEPage() {
       try {
         const [
           resIE, resIdentificacion, resGrados, resDano, resAgresion,
-          resEventos, resRoles, resLugares, resAccionesIE, resAccionesSEM, resClasificaciones
+          resEventos, resRoles, resLugares, resAccionesIE, resAccionesSEM, resClasificaciones, resEstados
         ] = await Promise.allSettled([
           api.obtenerInstituciones(),
           api.getTiposIdentificacion(),
@@ -90,7 +102,8 @@ export default function NuevoCasoSIUCEPage() {
           api.getLugaresHechos(),
           api.getAccionesIE(),
           api.getAccionesSEM(),
-          api.getClasificaciones()
+          api.getClasificaciones(),
+          api.getEstadosSIUCE()
         ])
 
         const extractData = (result: any) => {
@@ -100,7 +113,6 @@ export default function NuevoCasoSIUCEPage() {
           }
           return [];
         };
-
         setInstituciones(extractData(resIE))
         setTiposIdentificacion(extractData(resIdentificacion))
         setGrados(extractData(resGrados))
@@ -112,6 +124,7 @@ export default function NuevoCasoSIUCEPage() {
         setAccionesIE(extractData(resAccionesIE))
         setAccionesSEM(extractData(resAccionesSEM))
         setClasificaciones(extractData(resClasificaciones))
+        setEstadosSIUCE(extractData(resEstados))
         
       } catch (error) {
         console.error("Error crítico al cargar catálogos.", error)
@@ -188,7 +201,7 @@ export default function NuevoCasoSIUCEPage() {
     }
   }, [eventoGenerador, eventosGeneradores]);
 
-  const onSubmit = async (data: CasoSIUCEFormData) => {
+  const onSubmit = async (data: any) => {
     setError("")
     setIsLoading(true)
     
@@ -196,6 +209,22 @@ export default function NuevoCasoSIUCEPage() {
       if (hasSpecialChars(data.victima) || hasSpecialChars(data.nombreAgresor)) {
         setError(SPECIAL_CHARS_ERROR); setIsLoading(false); return;
       }
+
+      const casosExistentes = await api.getCasosSIUCE();
+      const esDuplicado = casosExistentes.some(
+        (c: any) => c.num_radicado_siuce?.toString().trim() === data.radicado.toString().trim()
+      );
+
+      if (esDuplicado) {
+        setFieldError("radicado", { type: "manual", message: "Este número de radicado ya existe en el sistema." });
+        setIsLoading(false);
+        return;
+      }
+
+      const estadoCorrespondiente = estadosSIUCE.find(e => 
+        (e.estado_siuce || e.nombre || "").toString().toUpperCase().includes(data.estado.toUpperCase())
+      );
+      const estadoId = estadoCorrespondiente ? estadoCorrespondiente.id : null;
 
       const payloadBackend = {
         num_radicado_siuce: data.radicado,
@@ -207,11 +236,11 @@ export default function NuevoCasoSIUCEPage() {
         grado_escolaridad: parseInt(data.grado),
         tipo_agresion: parseInt(data.tipoAgresion),
         dano_principal: data.danoPrincipal ? parseInt(data.danoPrincipal) : null,
-        dano_secundario: data.danoSecundario && data.danoSecundario !== "none" ? parseInt(data.danoSecundario)|| "N/A" : null,
-        dano_terciario: data.danoTerciario && data.danoTerciario !== "none" ? parseInt(data.danoTerciario) || "N/A" : null,
+        dano_secundario: data.danoSecundario && data.danoSecundario !== "none" ? parseInt(data.danoSecundario) : null,
+        dano_terciario: data.danoTerciario && data.danoTerciario !== "none" ? parseInt(data.danoTerciario) : null,
         repetitivo: data.repetitivo,
         evento_generador: parseInt(data.eventoGenerador),
-        otro_evento_generador: data.otroEventoGenerador ? sanitizeText(data.otroEventoGenerador) || "N/A" : null,
+        otro_evento_generador: data.otroEventoGenerador ? sanitizeText(data.otroEventoGenerador) : null,
         rol_agresor: parseInt(data.rolAgresor),
         nombre_agresor: sanitizeText(data.nombreAgresor),
         clasificacion: data.clasificacion ? parseInt(data.clasificacion) : null,
@@ -227,6 +256,8 @@ export default function NuevoCasoSIUCEPage() {
         descripcion_avance: data.descripcionAvance ? sanitizeText(data.descripcionAvance) : "Sin descripción",
         rad_entidad_ext: data.entidadesExternas || "",
         fecha_rad_entidad_ext: data.fechaRadicadoExternas || null,
+        estado_siuce: estadoId,
+        avance_general: data.avanceGeneral,
       }
 
       await api.crearCasoSIUCE(payloadBackend)
@@ -301,6 +332,7 @@ export default function NuevoCasoSIUCEPage() {
                   placeholder="Ej: 30523" 
                   maxLength={5}
                   {...register("radicado", { 
+                    required: "El número de radicado es requerido",
                     onChange: (e) => { 
                       e.target.value = e.target.value.replace(/\D/g, '');
                       clearErrors("radicado"); 
@@ -309,7 +341,7 @@ export default function NuevoCasoSIUCEPage() {
                   })} 
                   className={errors.radicado ? "border-red-500" : ""} 
                 />
-                {errors.radicado && <p className="text-sm text-red-500">{errors.radicado.message}</p>}
+                {errors.radicado && <p className="text-sm text-red-500">{errors.radicado.message as string}</p>}
               </div>
 
               <div className="space-y-2">
@@ -320,12 +352,27 @@ export default function NuevoCasoSIUCEPage() {
                   onChange={(val) => setValue("ie", val, { shouldValidate: true })}
                   placeholder="Buscar I.E...."
                 />
-                {errors.ie && <p className="text-sm text-red-500">{errors.ie.message}</p>}
+                {errors.ie && <p className="text-sm text-red-500">{errors.ie.message as string}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="fechaRegistro">Fecha de Registro <span className="text-red-500">*</span></Label>
-                <Input id="fechaRegistro" type="date" {...register("fechaRegistro")} className={errors.fechaRegistro ? "border-red-500" : ""} />
+                <Label>Fecha de Radicación <span className="text-red-500">*</span></Label>
+                <Input
+                  type="date"
+                  max={todayStr}
+                  {...register("fechaRegistro", { 
+                    required: "La fecha es requerida",
+                    validate: (value) => {
+                      if (!value) return true;
+                      return value <= todayStr || "La fecha no puede ser mayor al día de hoy.";
+                    }
+                  })}
+                  className={errors.fechaRegistro ? "border-red-500" : ""}
+                  disabled={isLoading}
+                />
+                {errors.fechaRegistro && (
+                  <p className="text-sm text-red-500 mt-1">{errors.fechaRegistro.message as string}</p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -338,8 +385,13 @@ export default function NuevoCasoSIUCEPage() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="victima">Nombre de la Víctima <span className="text-red-500">*</span></Label>
-                <Input id="victima" placeholder="Nombre completo" {...register("victima")} className={errors.victima ? "border-red-500 uppercase" : "uppercase"} />
-                {errors.victima && <p className="text-sm text-red-500">{errors.victima.message}</p>}
+                <Input 
+                  id="victima" 
+                  placeholder="Nombre completo" 
+                  {...register("victima", { required: "El nombre es requerido" })} 
+                  className={errors.victima ? "border-red-500 uppercase" : "uppercase"} 
+                />
+                {errors.victima && <p className="text-sm text-red-500">{errors.victima.message as string}</p>}
               </div>
 
               <div className="space-y-2">
@@ -354,7 +406,7 @@ export default function NuevoCasoSIUCEPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.tipoIdentificacion && <p className="text-sm text-red-500">{errors.tipoIdentificacion.message}</p>}
+                {errors.tipoIdentificacion && <p className="text-sm text-red-500">{errors.tipoIdentificacion.message as string}</p>}
               </div>
 
               <div className="space-y-2">
@@ -364,6 +416,7 @@ export default function NuevoCasoSIUCEPage() {
                   placeholder="Ej: 1090123456" 
                   maxLength={10}
                   {...register("numeroIdentificacion", { 
+                    required: "El número es requerido",
                     onChange: (e) => { 
                       e.target.value = e.target.value.replace(/\D/g, ''); 
                       clearErrors("numeroIdentificacion"); 
@@ -375,7 +428,7 @@ export default function NuevoCasoSIUCEPage() {
                 <p className="text-xs text-slate-500">
                   {(watch("numeroIdentificacion")?.length ?? 0)}/10 dígitos
                 </p>
-                {errors.numeroIdentificacion && <p className="text-sm text-red-500">{errors.numeroIdentificacion.message}</p>}
+                {errors.numeroIdentificacion && <p className="text-sm text-red-500">{errors.numeroIdentificacion.message as string}</p>}
               </div>
 
               <div className="space-y-2">
@@ -390,7 +443,7 @@ export default function NuevoCasoSIUCEPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.grado && <p className="text-sm text-red-500">{errors.grado.message}</p>}
+                {errors.grado && <p className="text-sm text-red-500">{errors.grado.message as string}</p>}
               </div>
             </div>
           </CardContent>
@@ -413,7 +466,7 @@ export default function NuevoCasoSIUCEPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.tipoAgresion && <p className="text-sm text-red-500">{errors.tipoAgresion.message}</p>}
+                {errors.tipoAgresion && <p className="text-sm text-red-500">{errors.tipoAgresion.message as string}</p>}
               </div>
 
               {/* DAÑO PRINCIPAL AUTOMÁTICO */}
@@ -467,7 +520,7 @@ export default function NuevoCasoSIUCEPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.eventoGenerador && <p className="text-sm text-red-500">{errors.eventoGenerador.message}</p>}
+                {errors.eventoGenerador && <p className="text-sm text-red-500">{errors.eventoGenerador.message as string}</p>}
               </div>
 
               {showOtroEvento && (
@@ -513,13 +566,18 @@ export default function NuevoCasoSIUCEPage() {
                   <SelectTrigger className={errors.rolAgresor ? "border-red-500" : ""}><SelectValue placeholder="Selecciona el rol" /></SelectTrigger>
                   <SelectContent>{rolesAgresor.map((rol) => (<SelectItem key={rol.id?.toString()} value={rol.id?.toString()}>{rol.nom_rol_agresor}</SelectItem>))}</SelectContent>
                 </Select>
-                {errors.rolAgresor && <p className="text-sm text-red-500">{errors.rolAgresor.message}</p>}
+                {errors.rolAgresor && <p className="text-sm text-red-500">{errors.rolAgresor.message as string}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="nombreAgresor">Nombre del Agresor <span className="text-red-500">*</span></Label>
-                <Input id="nombreAgresor" placeholder="Nombre completo" {...register("nombreAgresor")} className={errors.nombreAgresor ? "border-red-500 uppercase" : "uppercase"} />
-                {errors.nombreAgresor && <p className="text-sm text-red-500">{errors.nombreAgresor.message}</p>}
+                <Input 
+                  id="nombreAgresor" 
+                  placeholder="Nombre completo" 
+                  {...register("nombreAgresor", { required: "El nombre es requerido" })} 
+                  className={errors.nombreAgresor ? "border-red-500 uppercase" : "uppercase"} 
+                />
+                {errors.nombreAgresor && <p className="text-sm text-red-500">{errors.nombreAgresor.message as string}</p>}
               </div>
 
               <div className="space-y-2">
@@ -528,13 +586,28 @@ export default function NuevoCasoSIUCEPage() {
                   <SelectTrigger className={errors.lugar ? "border-red-500" : ""}><SelectValue placeholder="Selecciona el lugar" /></SelectTrigger>
                   <SelectContent>{lugares.map((l) => (<SelectItem key={l.id?.toString()} value={l.id?.toString()}>{l.nom_lugar}</SelectItem>))}</SelectContent>
                 </Select>
-                {errors.lugar && <p className="text-sm text-red-500">{errors.lugar.message}</p>}
+                {errors.lugar && <p className="text-sm text-red-500">{errors.lugar.message as string}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="fechaOcurrencia">Fecha de Ocurrencia <span className="text-red-500">*</span></Label>
-                <Input id="fechaOcurrencia" type="date" {...register("fechaOcurrencia")} className={errors.fechaOcurrencia ? "border-red-500" : ""} />
-                {errors.fechaOcurrencia && <p className="text-sm text-red-500">{errors.fechaOcurrencia.message}</p>}
+                <Input 
+                  id="fechaOcurrencia" 
+                  type="date" 
+                  max={fechaRegistroActual || todayStr} 
+                  {...register("fechaOcurrencia", {
+                    required: "La fecha es requerida",
+                    validate: (value) => {
+                      if (!value) return true;
+                      if (fechaRegistroActual && value > fechaRegistroActual) {
+                        return "No puede ser posterior a la fecha de radicación.";
+                      }
+                      return value <= todayStr || "No puede ser mayor al día de hoy.";
+                    }
+                  })} 
+                  className={errors.fechaOcurrencia ? "border-red-500" : ""} 
+                />
+                {errors.fechaOcurrencia && <p className="text-sm text-red-500">{errors.fechaOcurrencia.message as string}</p>}
               </div>
             </div>
           </CardContent>
@@ -571,7 +644,6 @@ export default function NuevoCasoSIUCEPage() {
           <CardHeader><CardTitle>Acciones y Avances</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-6 sm:grid-cols-2">
-              
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="accionesIE">Acciones de I.E.</Label>
