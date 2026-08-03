@@ -40,6 +40,13 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
+    if (form_data.captcha.toString().trim() !== captcha.answer.toString()) {
+      setError("El resultado del captcha es incorrecto. Inténtalo de nuevo.")
+      refreshCaptcha()
+      setIsLoading(false)
+      return
+    }
+
     try {
       const response = await fetch("http://127.0.0.1:8000/api/auth/login/", {
         method: "POST",
@@ -50,25 +57,27 @@ export default function LoginPage() {
         }),
       })
 
-      const result = await response.json()
+      const result = await response.json().catch(() => null)
 
-      if (response.ok) {
+      if (response.ok && result) {
         document.cookie = `access_token=${result.access}; path=/; max-age=86400; SameSite=Lax;`
-        document.cookie = `refresh_token=${result.refresh}; path=/; max-age=604800; SameSite=Lax;`
-
-        localStorage.setItem("access_token", result.access)
         if (result.refresh) {
+          document.cookie = `refresh_token=${result.refresh}; path=/; max-age=604800; SameSite=Lax;`
           localStorage.setItem("refresh_token", result.refresh)
         }
 
+        localStorage.setItem("access_token", result.access)
+
         const userData = result.usuario || result.user || { 
-          username: form_data.username,
+          username: result.username || form_data.username,
           first_name: result.first_name || "",
           last_name: result.last_name || ""
         }
         localStorage.setItem("user", JSON.stringify(userData))
 
-        const finalRole = (result.role || result.rol || (form_data.username.toLowerCase().includes("admin") ? "ADMINISTRADOR" : "LIDER")).toUpperCase()
+        const rawRole = result.role || result.rol || (form_data.username.toLowerCase().includes("admin") ? "ADMINISTRADOR" : "LIDER")
+        const finalRole = String(rawRole).toUpperCase()
+
         document.cookie = `user_role=${finalRole}; path=/; max-age=86400; SameSite=Lax;`
         localStorage.setItem("user_role", finalRole) 
 
@@ -78,13 +87,15 @@ export default function LoginPage() {
           window.location.href = "/administrador"
         }
       } else {
-        setError("Credenciales inválidas. Por favor, verifica tu usuario y contraseña.")
+        
+        const backendMessage = result?.detail || result?.non_field_errors?.[0] || "Credenciales inválidas. Por favor, verifica tu usuario y contraseña."
+        setError(backendMessage)
         reset({ username: "", password: "", captcha: "" })
         refreshCaptcha()
         setIsLoading(false)
       }
     } catch (err) {
-      setError("Error de conexión con el backend.")
+      setError("Error de conexión con el backend. Verifica que Django esté en ejecución.")
       reset({ username: "", password: "", captcha: "" })
       refreshCaptcha()
       setIsLoading(false)
