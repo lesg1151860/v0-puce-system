@@ -15,6 +15,38 @@ const getAuthHeaders = () => {
   };
 };
 
+export const authApi = {
+  requestPasswordReset: async (email: string) => {
+    const response = await fetch(`${BASE_URL}/auth/usuarios/<int:pk>/cambiar-contrasena//`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || "Error al solicitar la recuperación de contraseña");
+    }
+
+    return response.json();
+  },
+
+  confirmPasswordReset: async (data: { uid: string; token: string; new_password: string }) => {
+    const response = await fetch(`${BASE_URL}/auth/password-reset-confirm/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || "El enlace es inválido o ha expirado");
+    }
+
+    return response.json();
+  },
+};
+
 export const api = {
 
   // --- CRUD CASOS SAC ---
